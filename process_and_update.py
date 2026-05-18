@@ -22,7 +22,7 @@ import requests
 
 # Configuration
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "google/gemini-2.0-flash-001"  # Free model default
+DEFAULT_MODEL = "openrouter/free"  # Free model router
 DEFAULT_PROMPT_TEMPLATE = """You are a knowledge extraction assistant. Your task is to analyze text and extract three types of entities:
 
 1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary
@@ -173,20 +173,18 @@ Do not include any markdown formatting, code blocks, or explanations."""
             log(f"Calling OpenRouter API (attempt {attempt + 1}/{MAX_RETRIES})...")
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
             
-            # Handle 403 errors specifically
+            # Handle 403 errors specifically - do NOT retry on 403 as it won't help
             if response.status_code == 403:
                 log_error("HTTP 403 Forbidden received from OpenRouter API")
                 log_error("Please check the following:")
                 log_error("  1. OPENROUTER_API_KEY secret is valid and has credits")
-                log_error("  2. OPENROUTER_MODEL variable specifies an accessible model")
+                log_error("  2. OPENROUTER_MODEL variable specifies an accessible free model")
+                log_error(f"     Current model: {model}")
+                log_error("     Note: 'openrouter/free' is a special router that auto-selects a free model")
                 log_error("  3. Required headers (Authorization, Content-Type, HTTP-Referer, X-Title) are set correctly")
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY_BASE * (2 ** attempt)
-                    log(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                else:
-                    return None
-                continue
+                log_error(f"     HTTP-Referer: {repo_url}")
+                log_error("  4. Model is available at https://openrouter.ai/models?q=free")
+                return None
             
             response.raise_for_status()
             
@@ -195,6 +193,10 @@ Do not include any markdown formatting, code blocks, or explanations."""
             
             if not content:
                 log_error("Empty response from API")
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY_BASE * (2 ** attempt)
+                    log(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
                 continue
             
             # Try to parse JSON
@@ -204,6 +206,10 @@ Do not include any markdown formatting, code blocks, or explanations."""
             
             log_error(f"Failed to parse JSON from response: {content[:200]}...")
             
+            if attempt < MAX_RETRIES - 1:
+                delay = RETRY_DELAY_BASE * (2 ** attempt)
+                log(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
         except requests.exceptions.RequestException as e:
             log_error(f"API request failed: {e}")
             if attempt < MAX_RETRIES - 1:
