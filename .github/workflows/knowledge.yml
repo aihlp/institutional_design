@@ -22,15 +22,17 @@ on:
 jobs:
   extract-and-update:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
       contents: read
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       
@@ -65,11 +67,16 @@ jobs:
           WIKI_PUSH_TOKEN: ${{ secrets.WIKI_PUSH_TOKEN }}
           GITHUB_SERVER_URL: ${{ github.server-url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          INPUT_TEXT: ${{ github.event.inputs.text }}
-          INPUT_SOURCE: ${{ github.event.inputs.source }}
+          INPUT_TEXT: ${{ github.event.inputs.text || '' }}
+          INPUT_SOURCE: ${{ github.event.inputs.source || '' }}
           INBOX_PATH: "inbox"
-          FILE_PATTERN: ${{ steps.input-source.outputs.file_pattern }}
+          FILE_PATTERN: ${{ steps.input-source.outputs.file_pattern || '' }}
         run: |
+          echo "::group::Debug Info"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "INPUT_TEXT length: ${#INPUT_TEXT}"
+          echo "FILE_PATTERN: $FILE_PATTERN"
+          echo "::endgroup::"
           python process_and_update.py
       
       - name: Cleanup
