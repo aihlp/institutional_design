@@ -52,46 +52,56 @@ MAX_RETRIES = 2  # Maximum 2 attempts: one with json_schema, one with json_objec
 RETRY_DELAY_BASE = 2  # seconds
 RATE_LIMIT_DELAY = 30  # seconds to wait on 429 errors
 
-# JSON Schema for structured output
-EXTRACTION_JSON_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "definitions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string"},
-                    "context": {"type": "string"}
-                },
-                "required": ["text"]
+
+def build_extraction_json_schema() -> dict:
+    """
+    Build a JSON schema for structured output dynamically.
+    
+    The schema defines the expected output format but the parser will accept
+    ANY valid JSON and normalize it, so this is just a hint to the model.
+    
+    Returns:
+        JSON schema object for the response_format parameter
+    """
+    return {
+        "type": "object",
+        "properties": {
+            "definitions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "context": {"type": "string"}
+                    },
+                    "required": ["text"]
+                }
+            },
+            "facts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "context": {"type": "string"}
+                    },
+                    "required": ["text"]
+                }
+            },
+            "research": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "context": {"type": "string"}
+                    },
+                    "required": ["text"]
+                }
             }
         },
-        "facts": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string"},
-                    "context": {"type": "string"}
-                },
-                "required": ["text"]
-            }
-        },
-        "research": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "text": {"type": "string"},
-                    "context": {"type": "string"}
-                },
-                "required": ["text"]
-            }
-        }
-    },
-    "required": ["definitions", "facts", "research"]
-}
+        "required": ["definitions", "facts", "research"]
+    }
 
 
 def log(message: str):
@@ -203,7 +213,7 @@ Text to analyze:
     if use_schema:
         payload["response_format"] = {
             "type": "json_schema",
-            "json_schema": EXTRACTION_JSON_SCHEMA
+            "json_schema": build_extraction_json_schema()
         }
     else:
         payload["response_format"] = {"type": "json_object"}
