@@ -48,8 +48,50 @@ Example format:
 }
 
 CRITICAL: Output ONLY the raw JSON object. No markdown, no code blocks, no explanations."""
-MAX_RETRIES = 3
+MAX_RETRIES = 2  # Maximum 2 attempts: one with json_schema, one with json_object fallback
 RETRY_DELAY_BASE = 2  # seconds
+RATE_LIMIT_DELAY = 30  # seconds to wait on 429 errors
+
+# JSON Schema for structured output
+EXTRACTION_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "definitions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "context": {"type": "string"}
+                },
+                "required": ["text"]
+            }
+        },
+        "facts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "context": {"type": "string"}
+                },
+                "required": ["text"]
+            }
+        },
+        "research": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "context": {"type": "string"}
+                },
+                "required": ["text"]
+            }
+        }
+    },
+    "required": ["definitions", "facts", "research"]
+}
 
 
 def log(message: str):
@@ -109,21 +151,22 @@ def get_input_text() -> tuple[str, str]:
     return "", ""
 
 
-def call_openrouter(text: str, strict_json: bool = False) -> dict | None:
+def call_openrouter(text: str, use_schema: bool = True) -> tuple[dict | None, bool]:
     """
     Call OpenRouter API to extract entities from text.
     
     Args:
         text: The input text to process
-        strict_json: If True, use stricter prompt for retry
+        use_schema: If True, use json_schema response format; if False, use json_object
         
     Returns:
-        Parsed JSON response or None on failure
+        Tuple of (parsed JSON dict or None, schema_supported boolean)
+        schema_supported indicates whether the API supports json_schema format
     """
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         log_error("OPENROUTER_API_KEY environment variable not set")
-        return None
+        return None, True
     
     model = os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
     prompt_template = os.environ.get("OPENROUTER_PROMPT_TEMPLATE", DEFAULT_PROMPT_TEMPLATE)
@@ -133,22 +176,8 @@ def call_openrouter(text: str, strict_json: bool = False) -> dict | None:
     github_repo = os.environ.get("GITHUB_REPOSITORY", "unknown/repo")
     repo_url = f"{github_server}/{github_repo}"
     
-    # Build merged user message with clear instruction
-    if strict_json:
-        user_prompt = f"""You are a knowledge extraction assistant. Extract entities from the provided text.
-Return ONLY a valid JSON object with exactly this structure - no other text:
-{{
-  "definitions": [{{"text": "...", "context": "..."}}],
-  "facts": [{{"text": "...", "context": "..."}}],
-  "research": [{{"text": "...", "context": "..."}}]
-}}
-Each array may be empty. Each item must have 'text' field and optionally 'context'.
-Do not include any markdown formatting, code blocks, or explanations.
-
-Text to analyze:
-{text}"""
-    else:
-        user_prompt = f"""{prompt_template}
+    # Build user message with clear instruction
+    user_prompt = f"""{prompt_template}
 
 Text to analyze:
 {text}"""
@@ -160,145 +189,255 @@ Text to analyze:
         "X-Title": "Knowledge Extractor"
     }
     
+    # Build payload with appropriate response format
     payload = {
         "model": model,
         "messages": [
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 24000,
-        "response_format": {"type": "json_object"},
-        "provider": {"require_parameters": True},
-        "plugins": [{"id": "response-healing"}]
+        "max_tokens": 24000,  # Maximum output tokens to avoid truncation
     }
     
-    for attempt in range(MAX_RETRIES):
-        try:
-            log(f"Calling OpenRouter API (attempt {attempt + 1}/{MAX_RETRIES})...")
-            response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
-            
-            # Check HTTP status code first - handle different error codes appropriately
-            if response.status_code == 403:
-                log_error("HTTP 403 Forbidden received from OpenRouter API")
-                log_error("Please check the following:")
-                log_error("  1. OPENROUTER_API_KEY secret is valid and has credits")
-                log_error("  2. OPENROUTER_MODEL variable specifies an accessible free model")
-                log_error(f"     Current model: {model}")
-                log_error("     Note: 'openrouter/free' is a special router that auto-selects a free model")
-                log_error("  3. Required headers (Authorization, Content-Type, HTTP-Referer, X-Title) are set correctly")
-                log_error(f"     HTTP-Referer: {repo_url}")
-                log_error("  4. Model is available at https://openrouter.ai/models?q=free")
-                return None
-            
-            # Handle rate limiting (429) and service unavailable (503) with retry
-            if response.status_code in [429, 503]:
-                log_error(f"HTTP {response.status_code} received - rate limit or service issue")
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY_BASE * (2 ** attempt) * 2  # Longer delay for rate limits
-                    log(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                    continue
-                else:
-                    log_error(f"Max retries reached after HTTP {response.status_code}")
-                    return None
-            
-            # For other non-200 status codes, try to get more info but don't treat as success
-            if response.status_code != 200:
-                log_error(f"Unexpected HTTP status code: {response.status_code}")
-                log_error(f"Response body: {response.text[:500]}")
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY_BASE * (2 ** attempt)
-                    log(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                    continue
-                else:
-                    return None
-            
-            # Validate response body is not empty before parsing
-            if not response.text or len(response.text.strip()) == 0:
-                log_error("Empty response body from API (HTTP 200 but no content)")
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY_BASE * (2 ** attempt)
-                    log(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                continue
-            
-            result = response.json()
-            choices = result.get("choices", [])
-            if not choices:
-                log_error("No choices in API response")
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY_BASE * (2 ** attempt)
-                    log(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                continue
-            
-            choice = choices[0]
-            finish_reason = choice.get("finish_reason", "")
-            content = choice.get("message", {}).get("content", "")
-            
-            # Validate finish_reason is "stop" (not "length")
-            if finish_reason == "length":
-                log_error("Response truncated due to max_tokens limit (finish_reason: length)")
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY_BASE * (2 ** attempt)
-                    log(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                continue
-            
-            if not content:
-                log_error("Empty response from API (no content in choices)")
-                if attempt < MAX_RETRIES - 1:
-                    delay = RETRY_DELAY_BASE * (2 ** attempt)
-                    log(f"Retrying in {delay} seconds...")
-                    time.sleep(delay)
-                continue
-            
-            # Try to parse JSON
-            parsed = parse_json_response(content)
-            if parsed:
-                return parsed
-            
-            log_error(f"Failed to parse JSON from response: {content[:200]}...")
-            
-            if attempt < MAX_RETRIES - 1:
-                delay = RETRY_DELAY_BASE * (2 ** attempt)
-                log(f"Retrying in {delay} seconds...")
-                time.sleep(delay)
-        except requests.exceptions.Timeout as e:
-            log_error(f"API request timed out: {e}")
-            if attempt < MAX_RETRIES - 1:
-                delay = RETRY_DELAY_BASE * (2 ** attempt)
-                log(f"Retrying in {delay} seconds...")
-                time.sleep(delay)
-            else:
-                return None
-        except requests.exceptions.RequestException as e:
-            log_error(f"API request failed: {e}")
-            if attempt < MAX_RETRIES - 1:
-                delay = RETRY_DELAY_BASE * (2 ** attempt)
-                log(f"Retrying in {delay} seconds...")
-                time.sleep(delay)
-            else:
-                return None
+    # Use json_schema if requested, otherwise json_object
+    if use_schema:
+        payload["response_format"] = {
+            "type": "json_schema",
+            "json_schema": EXTRACTION_JSON_SCHEMA
+        }
+    else:
+        payload["response_format"] = {"type": "json_object"}
     
-    return None
+    # Note: removed "provider": {"require_parameters": true} - overly restrictive on free tier
+    # Note: removed "plugins" - not needed for basic extraction
+    
+    try:
+        log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
+        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
+        
+        # Check for OpenRouter errors returned inside HTTP 200
+        if response.status_code == 200:
+            result = response.json()
+            # Check for error field in response body
+            if "error" in result:
+                error_info = result.get("error", {})
+                error_code = error_info.get("code", "")
+                error_msg = error_info.get("message", "Unknown error")
+                
+                # Handle 429 rate limit specifically
+                if error_code == 429 or "rate limit" in error_msg.lower():
+                    log_error("Rate limit (429) received from OpenRouter")
+                    log(f"Waiting {RATE_LIMIT_DELAY} seconds before continuing...")
+                    time.sleep(RATE_LIMIT_DELAY)
+                    return None, True  # Signal to retry with backoff
+                
+                log_error(f"OpenRouter API error: {error_msg}")
+                return None, True
+        
+        # Check HTTP status code - handle different error codes appropriately
+        if response.status_code == 403:
+            log_error("HTTP 403 Forbidden received from OpenRouter API")
+            log_error("Please check the following:")
+            log_error("  1. OPENROUTER_API_KEY secret is valid and has credits")
+            log_error("  2. OPENROUTER_MODEL variable specifies an accessible free model")
+            log_error(f"     Current model: {model}")
+            log_error("     Note: 'openrouter/free' is a special router that auto-selects a free model")
+            log_error("  3. Required headers (Authorization, Content-Type, HTTP-Referer, X-Title) are set correctly")
+            log_error(f"     HTTP-Referer: {repo_url}")
+            log_error("  4. Model is available at https://openrouter.ai/models?q=free")
+            return None, True
+        
+        # Handle rate limiting (429) - wait and signal for retry
+        if response.status_code == 429:
+            log_error("HTTP 429 received - rate limit exceeded")
+            log(f"Waiting {RATE_LIMIT_DELAY} seconds before continuing...")
+            time.sleep(RATE_LIMIT_DELAY)
+            return None, True
+        
+        # Handle service unavailable (503)
+        if response.status_code == 503:
+            log_error("HTTP 503 received - service unavailable")
+            return None, True
+        
+        # For other non-200 status codes
+        if response.status_code != 200:
+            log_error(f"Unexpected HTTP status code: {response.status_code}")
+            log_error(f"Response body: {response.text[:500]}")
+            return None, True
+        
+        # Validate response body is not empty before parsing
+        if not response.text or len(response.text.strip()) == 0:
+            log_error("Empty response body from API (HTTP 200 but no content)")
+            return None, True
+        
+        result = response.json()
+        choices = result.get("choices", [])
+        if not choices:
+            log_error("No choices in API response")
+            return None, True
+        
+        choice = choices[0]
+        finish_reason = choice.get("finish_reason", "")
+        content = choice.get("message", {}).get("content", "")
+        
+        # Validate finish_reason is "stop" (not "length")
+        if finish_reason == "length":
+            log_error("Response truncated due to max_tokens limit (finish_reason: length)")
+            return None, True
+        
+        if not content:
+            log_error("Empty response from API (no content in choices)")
+            return None, True
+        
+        # Try to parse JSON
+        parsed = parse_json_response(content)
+        if parsed:
+            return parsed, True
+        
+        # If parsing failed, the schema might not be supported
+        log_error(f"Failed to parse JSON from response: {content[:200]}...")
+        return None, False  # Signal that json_schema may not be supported
+        
+    except requests.exceptions.Timeout as e:
+        log_error(f"API request timed out: {e}")
+        return None, True
+    except requests.exceptions.RequestException as e:
+        log_error(f"API request failed: {e}")
+        return None, True
+    except json.JSONDecodeError as e:
+        log_error(f"Failed to parse API response as JSON: {e}")
+        return None, True
+
+
+def normalize_json_to_structure(data: dict) -> dict:
+    """
+    Normalize any JSON object to the required {definitions, facts, research} structure.
+    
+    Uses heuristic key mapping:
+    - definitions, definition, defines, glossary → definitions
+    - facts, fact, findings, observations → facts
+    - research, analysis, insights, key_arguments, key_themes → research
+    - Everything else → facts (safe default)
+    
+    Args:
+        data: Any valid JSON dict
+        
+    Returns:
+        Normalized dict with definitions, facts, research arrays
+    """
+    result = {"definitions": [], "facts": [], "research": []}
+    
+    # Key category mappings
+    definition_keys = {"definitions", "definition", "defines", "glossary", "terms", "terminology"}
+    fact_keys = {"facts", "fact", "findings", "observations", "data_points", "statements", "information"}
+    research_keys = {"research", "analysis", "insights", "key_arguments", "key_themes", "hypotheses", 
+                     "studies", "arguments", "themes", "conclusions"}
+    
+    def extract_text_from_item(item) -> dict | None:
+        """Extract text and context from various item formats."""
+        if isinstance(item, str):
+            return {"text": item.strip()} if item.strip() else None
+        elif isinstance(item, dict):
+            # Look for text-like fields
+            text_fields = ["text", "content", "value", "statement", "point", "description", "title", "name"]
+            context_fields = ["context", "source", "reference", "note", "details", "explanation"]
+            
+            text_value = None
+            context_value = None
+            
+            for field in text_fields:
+                if field in item and isinstance(item[field], str) and item[field].strip():
+                    text_value = item[field].strip()
+                    break
+            
+            for field in context_fields:
+                if field in item and isinstance(item[field], str) and item[field].strip():
+                    context_value = item[field].strip()
+                    break
+            
+            # If no text field found, try to concatenate all string values
+            if not text_value:
+                all_strings = [v for v in item.values() if isinstance(v, str) and v.strip()]
+                if all_strings:
+                    text_value = all_strings[0].strip()
+            
+            if text_value:
+                result_item = {"text": text_value}
+                if context_value:
+                    result_item["context"] = context_value
+                return result_item
+            return None
+        return None
+    
+    def process_array(arr: list, category: str):
+        """Process an array and add items to the appropriate category."""
+        for item in arr:
+            extracted = extract_text_from_item(item)
+            if extracted:
+                result[category].append(extracted)
+    
+    def categorize_key(key: str) -> str:
+        """Determine which category a key belongs to."""
+        key_lower = key.lower()
+        if key_lower in definition_keys:
+            return "definitions"
+        elif key_lower in fact_keys:
+            return "facts"
+        elif key_lower in research_keys:
+            return "research"
+        else:
+            return "facts"  # Safe default
+    
+    def process_value(key: str, value, depth: int = 0):
+        """Recursively process a value and categorize it."""
+        # Prevent infinite recursion
+        if depth > 5:
+            return
+        
+        if isinstance(value, list):
+            category = categorize_key(key)
+            process_array(value, category)
+        elif isinstance(value, dict):
+            # Check if this dict looks like a data item (has text-like content)
+            extracted = extract_text_from_item(value)
+            if extracted:
+                category = categorize_key(key)
+                result[category].append(extracted)
+            else:
+                # Recurse into nested dicts
+                for nested_key, nested_value in value.items():
+                    process_value(nested_key, nested_value, depth + 1)
+        elif isinstance(value, str) and value.strip():
+            # Plain string value - add to facts by default
+            result["facts"].append({"text": value.strip()})
+    
+    # Process all top-level keys
+    for key, value in data.items():
+        process_value(key, value)
+    
+    return result
 
 
 def parse_json_response(content: str) -> dict | None:
     """
-    Parse JSON from API response, handling potential markdown formatting.
+    Parse JSON from API response, handling potential markdown formatting and any structure.
+    
+    This function:
+    1. Handles code fences (```json ... ```) with a regex that correctly captures nested braces
+    2. Strips any preamble text before the first {
+    3. Parses the JSON
+    4. Normalizes it to the required {definitions, facts, research} structure
     
     Args:
         content: Raw response content
         
     Returns:
-        Parsed JSON dict or None
+        Normalized dict with definitions, facts, research arrays, or None if no JSON found
     """
     # Remove markdown code blocks if present - handle both ```json and ``` variants
     content = content.strip()
     
-    # Try to extract JSON from markdown code blocks (more robust pattern)
+    # Try to extract JSON from markdown code blocks (more robust pattern for nested braces)
     json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', content, re.DOTALL)
     if json_match:
         content = json_match.group(1)
@@ -310,18 +449,28 @@ def parse_json_response(content: str) -> dict | None:
         if brace_match:
             content = brace_match.group(0)
     
+    # Check if we have any JSON-like content
+    if not content.startswith('{'):
+        log_error(f"No JSON object found in response. Content starts with: {content[:200]}")
+        return None
+    
     try:
         data = json.loads(content)
-        # Validate structure
+        
+        # Validate it's a dict
         if not isinstance(data, dict):
+            log_error(f"Parsed JSON is not an object: {type(data)}")
             return None
-        for key in ["definitions", "facts", "research"]:
-            if key not in data or not isinstance(data[key], list):
-                return None
-        return data
-    except json.JSONDecodeError:
+        
+        # Normalize to required structure using heuristic key mapping
+        normalized = normalize_json_to_structure(data)
+        
+        # Return the normalized structure (always has definitions, facts, research keys)
+        return normalized
+        
+    except json.JSONDecodeError as e:
         # Log the problematic content for debugging (first 200 chars)
-        log_error(f"JSON decode error. Content starts with: {content[:200]}")
+        log_error(f"JSON decode error: {e}. Content starts with: {content[:200]}")
         return None
 
 
@@ -637,15 +786,18 @@ def main():
     log(f"Processing input from source: {source}")
     log(f"Text length: {len(text)} characters")
     
-    # Call OpenRouter
-    extracted = call_openrouter(text, strict_json=False)
+    # Attempt 1: Use json_schema for structured output
+    extracted, schema_supported = call_openrouter(text, use_schema=True)
     
-    if not extracted:
-        log("First attempt failed, retrying with strict JSON mode...")
-        extracted = call_openrouter(text, strict_json=True)
+    # If first attempt failed and schema may not be supported, try with json_object fallback
+    if not extracted and not schema_supported:
+        log("json_schema may not be supported, retrying with json_object format...")
+        extracted, _ = call_openrouter(text, use_schema=False)
     
+    # Handle rate limit scenario - if we got a 429, the function already waited
+    # and returned None, so we should abort rather than retry immediately
     if not extracted:
-        log_error("Failed to extract entities from text after retries")
+        log_error("Failed to extract entities from text after maximum 2 attempts")
         sys.exit(1)
     
     # Validate extracted data
