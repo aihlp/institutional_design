@@ -133,29 +133,24 @@ def call_openrouter(text: str, strict_json: bool = False) -> dict | None:
     github_repo = os.environ.get("GITHUB_REPOSITORY", "unknown/repo")
     repo_url = f"{github_server}/{github_repo}"
     
-    # Determine if model supports response_format parameter (GPT and Claude models)
-    use_json_mode = False
-    if model and ("gpt-" in model.lower() or "claude-" in model.lower()):
-        use_json_mode = True
-    
+    # Build merged user message with clear instruction
     if strict_json:
-        system_prompt = """You are a knowledge extraction assistant. Extract entities from the provided text.
+        user_prompt = f"""You are a knowledge extraction assistant. Extract entities from the provided text.
 Return ONLY a valid JSON object with exactly this structure - no other text:
-{
-  "definitions": [{"text": "...", "context": "..."}],
-  "facts": [{"text": "...", "context": "..."}],
-  "research": [{"text": "...", "context": "..."}]
-}
+{{
+  "definitions": [{{"text": "...", "context": "..."}}],
+  "facts": [{{"text": "...", "context": "..."}}],
+  "research": [{{"text": "...", "context": "..."}}]
+}}
 Each array may be empty. Each item must have 'text' field and optionally 'context'.
-Do not include any markdown formatting, code blocks, or explanations."""
-        
-        user_prompt = f"""Extract definitions, facts, and research from this text. Return ONLY valid JSON:
+Do not include any markdown formatting, code blocks, or explanations.
 
+Text to analyze:
 {text}"""
     else:
-        system_prompt = prompt_template
-        user_prompt = f"""Please analyze the following text and extract all relevant definitions, facts, and research findings:
+        user_prompt = f"""{prompt_template}
 
+Text to analyze:
 {text}"""
 
     headers = {
@@ -168,16 +163,14 @@ Do not include any markdown formatting, code blocks, or explanations."""
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 4000
+        "max_tokens": 24000,
+        "response_format": {"type": "json_object"},
+        "provider": {"require_parameters": true},
+        "plugins": [{"id": "response-healing"}]
     }
-    
-    # Add response_format for models that support it
-    if use_json_mode:
-        payload["response_format"] = {"type": "json_object"}
     
     for attempt in range(MAX_RETRIES):
         try:
@@ -231,7 +224,27 @@ Do not include any markdown formatting, code blocks, or explanations."""
                 continue
             
             result = response.json()
-            content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            choices = result.get("choices", [])
+            if not choices:
+                log_error("No choices in API response")
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY_BASE * (2 ** attempt)
+                    log(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                continue
+            
+            choice = choices[0]
+            finish_reason = choice.get("finish_reason", "")
+            content = choice.get("message", {}).get("content", "")
+            
+            # Validate finish_reason is "stop" (not "length")
+            if finish_reason == "length":
+                log_error("Response truncated due to max_tokens limit (finish_reason: length)")
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY_BASE * (2 ** attempt)
+                    log(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                continue
             
             if not content:
                 log_error("Empty response from API (no content in choices)")
