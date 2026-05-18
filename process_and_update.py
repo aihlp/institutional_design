@@ -168,7 +168,7 @@ Text to analyze:
         "temperature": 0.3,
         "max_tokens": 24000,
         "response_format": {"type": "json_object"},
-        "provider": {"require_parameters": true},
+        "provider": {"require_parameters": True},
         "plugins": [{"id": "response-healing"}]
     }
     
