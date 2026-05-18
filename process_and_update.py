@@ -23,13 +23,15 @@ import requests
 # Configuration
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openrouter/free"  # Free model router
-DEFAULT_PROMPT_TEMPLATE = """You are a knowledge extraction assistant. Your task is to analyze text and extract three types of entities:
+DEFAULT_PROMPT_TEMPLATE = """You are a precise data extraction tool. Your entire response must be a single valid JSON object and nothing else. Do not include any markdown formatting, explanations, or code fences.
+
+Your task is to analyze text and extract three types of entities:
 
 1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary
 2. FACTS: Verifiable statements, data points, or established information  
 3. RESEARCH: Insights, hypotheses, study results, or emerging findings
 
-Return your analysis as a JSON object with three arrays: "definitions", "facts", and "research".
+Return your analysis as a JSON object with exactly three arrays: "definitions", "facts", and "research".
 Each item should have a "text" field (the extracted content) and optionally a "context" field (additional relevant information).
 
 Example format:
@@ -45,7 +47,7 @@ Example format:
   ]
 }
 
-Only return the JSON object, nothing else."""
+CRITICAL: Output ONLY the raw JSON object. No markdown, no code blocks, no explanations."""
 MAX_RETRIES = 3
 RETRY_DELAY_BASE = 2  # seconds
 
@@ -131,6 +133,11 @@ def call_openrouter(text: str, strict_json: bool = False) -> dict | None:
     github_repo = os.environ.get("GITHUB_REPOSITORY", "unknown/repo")
     repo_url = f"{github_server}/{github_repo}"
     
+    # Determine if model supports response_format parameter (GPT and Claude models)
+    use_json_mode = False
+    if model and ("gpt-" in model.lower() or "claude-" in model.lower()):
+        use_json_mode = True
+    
     if strict_json:
         system_prompt = """You are a knowledge extraction assistant. Extract entities from the provided text.
 Return ONLY a valid JSON object with exactly this structure - no other text:
@@ -165,15 +172,19 @@ Do not include any markdown formatting, code blocks, or explanations."""
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 2000
+        "max_tokens": 4000
     }
+    
+    # Add response_format for models that support it
+    if use_json_mode:
+        payload["response_format"] = {"type": "json_object"}
     
     for attempt in range(MAX_RETRIES):
         try:
             log(f"Calling OpenRouter API (attempt {attempt + 1}/{MAX_RETRIES})...")
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
             
-            # Handle 403 errors specifically - do NOT retry on 403 as it won't help
+            # Check HTTP status code first - handle different error codes appropriately
             if response.status_code == 403:
                 log_error("HTTP 403 Forbidden received from OpenRouter API")
                 log_error("Please check the following:")
@@ -186,13 +197,44 @@ Do not include any markdown formatting, code blocks, or explanations."""
                 log_error("  4. Model is available at https://openrouter.ai/models?q=free")
                 return None
             
-            response.raise_for_status()
+            # Handle rate limiting (429) and service unavailable (503) with retry
+            if response.status_code in [429, 503]:
+                log_error(f"HTTP {response.status_code} received - rate limit or service issue")
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY_BASE * (2 ** attempt) * 2  # Longer delay for rate limits
+                    log(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    log_error(f"Max retries reached after HTTP {response.status_code}")
+                    return None
+            
+            # For other non-200 status codes, try to get more info but don't treat as success
+            if response.status_code != 200:
+                log_error(f"Unexpected HTTP status code: {response.status_code}")
+                log_error(f"Response body: {response.text[:500]}")
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY_BASE * (2 ** attempt)
+                    log(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    return None
+            
+            # Validate response body is not empty before parsing
+            if not response.text or len(response.text.strip()) == 0:
+                log_error("Empty response body from API (HTTP 200 but no content)")
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY_BASE * (2 ** attempt)
+                    log(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                continue
             
             result = response.json()
             content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
             
             if not content:
-                log_error("Empty response from API")
+                log_error("Empty response from API (no content in choices)")
                 if attempt < MAX_RETRIES - 1:
                     delay = RETRY_DELAY_BASE * (2 ** attempt)
                     log(f"Retrying in {delay} seconds...")
@@ -210,6 +252,14 @@ Do not include any markdown formatting, code blocks, or explanations."""
                 delay = RETRY_DELAY_BASE * (2 ** attempt)
                 log(f"Retrying in {delay} seconds...")
                 time.sleep(delay)
+        except requests.exceptions.Timeout as e:
+            log_error(f"API request timed out: {e}")
+            if attempt < MAX_RETRIES - 1:
+                delay = RETRY_DELAY_BASE * (2 ** attempt)
+                log(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                return None
         except requests.exceptions.RequestException as e:
             log_error(f"API request failed: {e}")
             if attempt < MAX_RETRIES - 1:
@@ -232,16 +282,17 @@ def parse_json_response(content: str) -> dict | None:
     Returns:
         Parsed JSON dict or None
     """
-    # Remove markdown code blocks if present
+    # Remove markdown code blocks if present - handle both ```json and ``` variants
     content = content.strip()
     
-    # Try to extract JSON from markdown code blocks
+    # Try to extract JSON from markdown code blocks (more robust pattern)
     json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', content, re.DOTALL)
     if json_match:
         content = json_match.group(1)
     
-    # Also try to find JSON object directly
+    # If still wrapped in backticks or has prefix text, find the first JSON object
     if not content.startswith('{'):
+        # Find the first { and last } to extract the complete JSON object
         brace_match = re.search(r'\{.*\}', content, re.DOTALL)
         if brace_match:
             content = brace_match.group(0)
@@ -256,6 +307,8 @@ def parse_json_response(content: str) -> dict | None:
                 return None
         return data
     except json.JSONDecodeError:
+        # Log the problematic content for debugging (first 200 chars)
+        log_error(f"JSON decode error. Content starts with: {content[:200]}")
         return None
 
 
@@ -433,6 +486,9 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
     token = os.environ.get("WIKI_PUSH_TOKEN", "")
     if not token:
         log_error("WIKI_PUSH_TOKEN not set")
+        log_error("Please ensure the WIKI_PUSH_TOKEN secret is configured with a GitHub classic token.")
+        log_error("The token must have 'repo' and 'wiki' scopes.")
+        log_error("Create token at: https://github.com/settings/tokens/new (select 'Classic' token)")
         return False
     
     try:
@@ -480,7 +536,7 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
             capture_output=True
         )
         
-        # Prepare remote URL with token
+        # Prepare remote URL with token - always set it to ensure authentication
         result = subprocess.run(
             ["git", "remote", "get-url", "origin"],
             cwd=wiki_dir,
@@ -490,7 +546,7 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
         )
         remote_url = result.stdout.strip()
         
-        # Insert token if not already present
+        # Always insert token for authentication (in case it was cloned without token)
         if "@" not in remote_url:
             auth_url = remote_url.replace("https://", f"https://{token}@")
             subprocess.run(
@@ -499,6 +555,7 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
                 check=True,
                 capture_output=True
             )
+            log("Set authenticated remote URL")
         
         # Push with conflict handling
         for attempt in range(2):
@@ -513,7 +570,19 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
                 log("Wiki changes pushed successfully")
                 return True
             except subprocess.CalledProcessError as e:
-                if "rejected" in e.stderr.lower() and attempt == 0:
+                error_output = e.stderr or ""
+                # Check for 403 permission denied specifically
+                if "403" in error_output or "permission denied" in error_output.lower():
+                    log_error("HTTP 403 Permission Denied when pushing to wiki")
+                    log_error("The WIKI_PUSH_TOKEN does not have proper permissions.")
+                    log_error("Required fixes:")
+                    log_error("  1. Create a NEW classic token at: https://github.com/settings/tokens/new")
+                    log_error("  2. Select scopes: 'repo' (or 'public_repo') AND 'wiki'")
+                    log_error("  3. Ensure the token owner has write access to the repository")
+                    log_error("  4. Update the WIKI_PUSH_TOKEN secret in repository Settings > Secrets > Actions")
+                    return False
+                
+                if "rejected" in error_output.lower() and attempt == 0:
                     log("Push rejected, attempting rebase...")
                     subprocess.run(
                         ["git", "pull", "--rebase", "origin", "master"],
@@ -530,7 +599,7 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
                     log("Wiki changes pushed after rebase")
                     return True
                 else:
-                    log_error(f"Failed to push wiki changes: {e.stderr}")
+                    log_error(f"Failed to push wiki changes: {error_output}")
                     return False
                     
     except subprocess.CalledProcessError as e:
