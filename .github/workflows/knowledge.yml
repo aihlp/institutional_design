@@ -9,7 +9,7 @@ on:
         required: false
         type: string
       source:
-        description: "Optional source label (defaults to 'Manual Input')"
+        description: "Optional source label (defaults to 'manual')"
         required: false
         type: string
         default: ""
@@ -24,12 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001' }}
+      OPENROUTER_PROMPT_TEMPLATE: ${{ vars.OPENROUTER_PROMPT_TEMPLATE || '' }}
     permissions:
       contents: read
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v6
