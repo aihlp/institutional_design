@@ -64,43 +64,47 @@ def build_extraction_json_schema() -> dict:
         JSON schema object for the response_format parameter
     """
     return {
-        "type": "object",
-        "properties": {
-            "definitions": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "context": {"type": "string"}
-                    },
-                    "required": ["text"]
+        "name": "knowledge_extraction",
+        "strict": False,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "definitions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "context": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
+                },
+                "facts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "context": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
+                },
+                "research": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "context": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
                 }
             },
-            "facts": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "context": {"type": "string"}
-                    },
-                    "required": ["text"]
-                }
-            },
-            "research": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "context": {"type": "string"}
-                    },
-                    "required": ["text"]
-                }
-            }
-        },
-        "required": ["definitions", "facts", "research"]
+            "required": ["definitions", "facts", "research"]
+        }
     }
 
 
