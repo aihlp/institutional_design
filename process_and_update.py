@@ -22,7 +22,30 @@ import requests
 
 # Configuration
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "openai/gpt-4o"  # Can be overridden via env var
+DEFAULT_MODEL = "google/gemini-2.0-flash-001"  # Free model default
+DEFAULT_PROMPT_TEMPLATE = """You are a knowledge extraction assistant. Your task is to analyze text and extract three types of entities:
+
+1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary
+2. FACTS: Verifiable statements, data points, or established information  
+3. RESEARCH: Insights, hypotheses, study results, or emerging findings
+
+Return your analysis as a JSON object with three arrays: "definitions", "facts", and "research".
+Each item should have a "text" field (the extracted content) and optionally a "context" field (additional relevant information).
+
+Example format:
+{
+  "definitions": [
+    {"text": "Term explanation", "context": "Related concept"}
+  ],
+  "facts": [
+    {"text": "Verifiable statement"}
+  ],
+  "research": [
+    {"text": "Research insight", "context": "Study reference"}
+  ]
+}
+
+Only return the JSON object, nothing else."""
 MAX_RETRIES = 3
 RETRY_DELAY_BASE = 2  # seconds
 
@@ -49,7 +72,7 @@ def get_input_text() -> tuple[str, str]:
     manual_source = os.environ.get("INPUT_SOURCE", "").strip()
     
     if manual_text:
-        source = manual_source if manual_source else "Manual Input"
+        source = manual_source if manual_source else "manual"
         return manual_text, source
     
     # Check for file-based input
@@ -100,7 +123,13 @@ def call_openrouter(text: str, strict_json: bool = False) -> dict | None:
         log_error("OPENROUTER_API_KEY environment variable not set")
         return None
     
-    model = os.environ.get("OPENROUTER_MODEL", MODEL)
+    model = os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
+    prompt_template = os.environ.get("OPENROUTER_PROMPT_TEMPLATE", DEFAULT_PROMPT_TEMPLATE)
+    
+    # Get repo URL for HTTP-Referer header
+    github_server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+    github_repo = os.environ.get("GITHUB_REPOSITORY", "unknown/repo")
+    repo_url = f"{github_server}/{github_repo}"
     
     if strict_json:
         system_prompt = """You are a knowledge extraction assistant. Extract entities from the provided text.
@@ -117,30 +146,7 @@ Do not include any markdown formatting, code blocks, or explanations."""
 
 {text}"""
     else:
-        system_prompt = """You are a knowledge extraction assistant. Your task is to analyze text and extract three types of entities:
-
-1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary
-2. FACTS: Verifiable statements, data points, or established information  
-3. RESEARCH: Insights, hypotheses, study results, or emerging findings
-
-Return your analysis as a JSON object with three arrays: "definitions", "facts", and "research".
-Each item should have a "text" field (the extracted content) and optionally a "context" field (additional relevant information).
-
-Example format:
-{
-  "definitions": [
-    {"text": "Term explanation", "context": "Related concept"}
-  ],
-  "facts": [
-    {"text": "Verifiable statement"}
-  ],
-  "research": [
-    {"text": "Research insight", "context": "Study reference"}
-  ]
-}
-
-Only return the JSON object, nothing else."""
-        
+        system_prompt = prompt_template
         user_prompt = f"""Please analyze the following text and extract all relevant definitions, facts, and research findings:
 
 {text}"""
@@ -148,7 +154,7 @@ Only return the JSON object, nothing else."""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com",
+        "HTTP-Referer": repo_url,
         "X-Title": "Knowledge Extractor"
     }
     
@@ -166,6 +172,22 @@ Only return the JSON object, nothing else."""
         try:
             log(f"Calling OpenRouter API (attempt {attempt + 1}/{MAX_RETRIES})...")
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
+            
+            # Handle 403 errors specifically
+            if response.status_code == 403:
+                log_error("HTTP 403 Forbidden received from OpenRouter API")
+                log_error("Please check the following:")
+                log_error("  1. OPENROUTER_API_KEY secret is valid and has credits")
+                log_error("  2. OPENROUTER_MODEL variable specifies an accessible model")
+                log_error("  3. Required headers (Authorization, Content-Type, HTTP-Referer, X-Title) are set correctly")
+                if attempt < MAX_RETRIES - 1:
+                    delay = RETRY_DELAY_BASE * (2 ** attempt)
+                    log(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                else:
+                    return None
+                continue
+            
             response.raise_for_status()
             
             result = response.json()
