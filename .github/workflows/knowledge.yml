@@ -65,11 +65,16 @@ jobs:
           WIKI_PUSH_TOKEN: ${{ secrets.WIKI_PUSH_TOKEN }}
           GITHUB_SERVER_URL: ${{ github.server-url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          INPUT_TEXT: ${{ github.event.inputs.text }}
-          INPUT_SOURCE: ${{ github.event.inputs.source }}
+          INPUT_TEXT: ${{ github.event.inputs.text || '' }}
+          INPUT_SOURCE: ${{ github.event.inputs.source || '' }}
           INBOX_PATH: "inbox"
-          FILE_PATTERN: ${{ steps.input-source.outputs.file_pattern }}
+          FILE_PATTERN: ${{ steps.input-source.outputs.file_pattern || '' }}
         run: |
+          echo "::group::Debug Info"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "INPUT_TEXT length: ${#INPUT_TEXT}"
+          echo "FILE_PATTERN: $FILE_PATTERN"
+          echo "::endgroup::"
           python process_and_update.py
       
       - name: Cleanup
