@@ -18,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+import json5
 
 
 # Configuration
@@ -439,7 +440,7 @@ def parse_json_response(content: str) -> dict | None:
     This function:
     1. Handles code fences (```json ... ```) with a regex that correctly captures nested braces
     2. Strips any preamble text before the first {
-    3. Parses the JSON
+    3. Parses the JSON using multiple stages (json → json5 → sanitized fallback)
     4. Normalizes it to the required {definitions, facts, research} structure
     
     Args:
@@ -448,11 +449,11 @@ def parse_json_response(content: str) -> dict | None:
     Returns:
         Normalized dict with definitions, facts, research arrays, or None if no JSON found
     """
-    # Remove markdown code blocks if present - handle both ```json and ``` variants
+    # Remove markdown code blocks if present - use greedy pattern for nested braces
     content = content.strip()
     
-    # Try to extract JSON from markdown code blocks (more robust pattern for nested braces)
-    json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', content, re.DOTALL)
+    # Try to extract JSON from markdown code blocks (greedy pattern handles nested braces)
+    json_match = re.search(r'```(?:json)?\s*(\{.*\})\s*```', content, re.DOTALL)
     if json_match:
         content = json_match.group(1)
     
@@ -468,6 +469,7 @@ def parse_json_response(content: str) -> dict | None:
         log_error(f"No JSON object found in response. Content starts with: {content[:200]}")
         return None
     
+    # Stage 1: Try strict json.loads() (fast path for well-formed JSON)
     try:
         data = json.loads(content)
         
@@ -484,8 +486,125 @@ def parse_json_response(content: str) -> dict | None:
         
     except json.JSONDecodeError as e:
         # Log the problematic content for debugging (first 200 chars)
-        log_error(f"JSON decode error: {e}. Content starts with: {content[:200]}")
-        return None
+        log_error(f"Stage 1 (json.loads) failed: {e}")
+    
+    # Stage 2: Try json5.loads() (handles trailing commas, unquoted keys, single quotes)
+    try:
+        data = json5.loads(content)
+        
+        # Validate it's a dict
+        if not isinstance(data, dict):
+            log_error(f"Parsed JSON5 is not an object: {type(data)}")
+            return None
+        
+        # Normalize to required structure
+        normalized = normalize_json_to_structure(data)
+        log("Stage 2 (json5) succeeded in parsing malformed JSON")
+        return normalized
+        
+    except Exception as e:
+        log_error(f"Stage 2 (json5.loads) failed: {e}")
+    
+    # Stage 3: Attempt to sanitize and fix common JSON errors
+    # Try to fix the character at the reported error position
+    try:
+        sanitized = _sanitize_json_content(content)
+        if sanitized != content:
+            data = json.loads(sanitized)
+            
+            # Validate it's a dict
+            if not isinstance(data, dict):
+                log_error(f"Sanitized JSON is not an object: {type(data)}")
+                return None
+            
+            # Normalize to required structure
+            normalized = normalize_json_to_structure(data)
+            log("Stage 3 (sanitization) succeeded in fixing JSON")
+            return normalized
+    except Exception as e:
+        log_error(f"Stage 3 (sanitization) failed: {e}")
+    
+    # Stage 4: All attempts failed
+    log_error("All JSON parsing stages failed")
+    return None
+
+
+def _sanitize_json_content(content: str) -> str:
+    """
+    Attempt to sanitize and fix common JSON syntax errors.
+    
+    This function tries to fix:
+    - Unescaped quotes inside string values
+    - Unescaped backslashes
+    - Control characters like newlines inside strings
+    
+    Args:
+        content: Raw JSON content with potential syntax errors
+        
+    Returns:
+        Sanitized JSON content
+    """
+    # First, try to identify the error position by attempting to parse
+    # and catching the JSONDecodeError to get the position
+    try:
+        json.loads(content)
+        return content  # Already valid
+    except json.JSONDecodeError as e:
+        error_pos = e.pos
+        error_msg = str(e)
+    
+    # Common fixes based on error message patterns
+    # Fix unescaped quotes inside strings by finding string boundaries
+    result = []
+    i = 0
+    in_string = False
+    escape_next = False
+    
+    while i < len(content):
+        char = content[i]
+        
+        if escape_next:
+            result.append(char)
+            escape_next = False
+            i += 1
+            continue
+        
+        if char == '\\':
+            result.append(char)
+            escape_next = True
+            i += 1
+            continue
+        
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            result.append(char)
+            i += 1
+            continue
+        
+        if in_string and char in '\n\r\t':
+            # Escape control characters inside strings
+            if char == '\n':
+                result.append('\\n')
+            elif char == '\r':
+                result.append('\\r')
+            elif char == '\t':
+                result.append('\\t')
+            i += 1
+            continue
+        
+        result.append(char)
+        i += 1
+    
+    sanitized = ''.join(result)
+    
+    # Try to fix trailing commas before } or ]
+    sanitized = re.sub(r',(\s*[}\]])', r'\1', sanitized)
+    
+    # Try to fix unquoted keys (simple case: word followed by colon)
+    # Only do this if it looks like JSON5-style unquoted keys
+    # sanitized = re.sub(r'([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', sanitized)
+    
+    return sanitized
 
 
 def clone_wiki(repo_url: str, wiki_dir: Path) -> bool:
@@ -733,11 +852,11 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
             )
             log("Set authenticated remote URL")
         
-        # Push with conflict handling
+        # Push with conflict handling - bypass global credential helper to use token in URL
         for attempt in range(2):
             try:
                 subprocess.run(
-                    ["git", "push", "origin", "master"],
+                    ["git", "-c", "http.extraHeader=", "push", "origin", "master"],
                     cwd=wiki_dir,
                     check=True,
                     capture_output=True,
@@ -761,13 +880,13 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
                 if "rejected" in error_output.lower() and attempt == 0:
                     log("Push rejected, attempting rebase...")
                     subprocess.run(
-                        ["git", "pull", "--rebase", "origin", "master"],
+                        ["git", "-c", "http.extraHeader=", "pull", "--rebase", "origin", "master"],
                         cwd=wiki_dir,
                         check=True,
                         capture_output=True
                     )
                     subprocess.run(
-                        ["git", "push", "origin", "master"],
+                        ["git", "-c", "http.extraHeader=", "push", "origin", "master"],
                         cwd=wiki_dir,
                         check=True,
                         capture_output=True
