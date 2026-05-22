@@ -786,6 +786,35 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
         log_error("Create token at: https://github.com/settings/tokens/new (select 'Classic' token)")
         return False
     
+    # Verify token has wiki access before attempting push
+    github_repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if github_repo:
+        log("Verifying WIKI_PUSH_TOKEN has wiki access...")
+        try:
+            api_headers = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            wiki_api_url = f"https://api.github.com/repos/{github_repo}/wiki"
+            wiki_response = requests.get(wiki_api_url, headers=api_headers, timeout=10)
+            
+            if wiki_response.status_code == 403:
+                log_error("HTTP 403 from GitHub API: WIKI_PUSH_TOKEN lacks wiki scope")
+                log_error("The token must have 'repo' (or 'public_repo') AND 'wiki' scopes.")
+                log_error("Create a new classic token at: https://github.com/settings/tokens/new")
+                return False
+            elif wiki_response.status_code == 404:
+                log_error("HTTP 404 from GitHub API: Wiki may not be enabled or token lacks access")
+                log_error("Ensure the repository has wiki enabled and the token has proper scopes.")
+                return False
+            elif wiki_response.status_code == 200:
+                log("Wiki access verified successfully")
+            else:
+                log(f"Wiki API returned status {wiki_response.status_code}, proceeding with push...")
+        except requests.exceptions.RequestException as e:
+            log_error(f"Failed to verify wiki access: {e}")
+            # Continue anyway - verification is optional
+    
     try:
         # Configure git user
         subprocess.run(
@@ -852,11 +881,22 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
             )
             log("Set authenticated remote URL")
         
-        # Push with conflict handling - bypass global credential helper to use token in URL
+        # Unset the URL-specific extraheader that overrides token in URL
+        # This is critical: actions/checkout sets http.https://github.com/.extraheader
+        # which takes precedence over the token embedded in the remote URL
+        subprocess.run(
+            ["git", "config", "--local", "--unset-all", "http.https://github.com/.extraheader"],
+            cwd=wiki_dir,
+            check=False,  # Don't fail if key doesn't exist
+            capture_output=True
+        )
+        log("Unset GITHUB_TOKEN extraheader to allow WIKI_PUSH_TOKEN authentication")
+        
+        # Push with conflict handling - token in URL will now be used
         for attempt in range(2):
             try:
                 subprocess.run(
-                    ["git", "-c", "http.extraHeader=", "push", "origin", "master"],
+                    ["git", "push", "origin", "master"],
                     cwd=wiki_dir,
                     check=True,
                     capture_output=True,
@@ -880,13 +920,13 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
                 if "rejected" in error_output.lower() and attempt == 0:
                     log("Push rejected, attempting rebase...")
                     subprocess.run(
-                        ["git", "-c", "http.extraHeader=", "pull", "--rebase", "origin", "master"],
+                        ["git", "pull", "--rebase", "origin", "master"],
                         cwd=wiki_dir,
                         check=True,
                         capture_output=True
                     )
                     subprocess.run(
-                        ["git", "-c", "http.extraHeader=", "push", "origin", "master"],
+                        ["git", "push", "origin", "master"],
                         cwd=wiki_dir,
                         check=True,
                         capture_output=True
