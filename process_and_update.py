@@ -48,7 +48,14 @@ Example format:
   ]
 }
 
-CRITICAL: Output ONLY the raw JSON object. No markdown, no code blocks, no explanations."""
+CRITICAL INSTRUCTIONS:
+- Output ONLY the raw JSON object. No markdown, no code blocks, no explanations.
+- Do not wrap your response in ```json or ``` markers.
+- Do not add any text before or after the JSON object.
+- The JSON must start with { and end with }.
+- If you cannot extract any entities from a category, use an empty array [].
+
+Begin your response with { and end with }."""
 MAX_RETRIES = 2  # Maximum 2 attempts: one with json_schema, one with json_object fallback
 RETRY_DELAY_BASE = 2  # seconds
 RATE_LIMIT_DELAY = 30  # seconds to wait on 429 errors
@@ -233,6 +240,13 @@ Text to analyze:
             "allow_fallbacks": True,
             "require_parameters": False
         }
+        # Also add a specific model hint for reliable JSON output
+        # Try claude-3-haiku first as it's free and supports json_schema well
+        payload["models"] = [
+            "anthropic/claude-3-haiku",
+            "google/gemini-flash-1.5",
+            "meta-llama/llama-3-8b-instruct"
+        ]
     
     try:
         log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
@@ -295,9 +309,11 @@ Text to analyze:
         
         result = response.json()
         
-        # Debug: log the full response structure for empty choices
+        # Debug: log the full response structure for debugging
+        log(f"API response structure: choices={len(result.get('choices', []))}, model={result.get('model', 'unknown')}")
+        
         if not result.get("choices"):
-            log_error(f"Full API response: {json.dumps(result, indent=2)[:1000]}")
+            log_error(f"Full API response: {json.dumps(result, indent=2)[:1500]}")
         
         choices = result.get("choices", [])
         if not choices:
@@ -310,7 +326,12 @@ Text to analyze:
         
         # Debug: log if content is empty but choices exist
         if not content and choices:
-            log_error(f"Choice has no content. Choice structure: {json.dumps(choice, indent=2)[:500]}")
+            log_error(f"Choice has no content. Choice structure: {json.dumps(choice, indent=2)[:800]}")
+            log_error(f"Finish reason: {finish_reason}")
+            log_error(f"Model used: {result.get('model', 'unknown')}")
+            # This often happens when the model doesn't support the response_format parameter
+            # Try falling back to json_object format
+            return None, False
         
         # Validate finish_reason is "stop" (not "length")
         if finish_reason == "length":
@@ -803,33 +824,41 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
         log_error("Create token at: https://github.com/settings/tokens/new (select 'Classic' token)")
         return False
     
-    # Verify token has wiki access before attempting push
+    # Verify token has wiki access by attempting a lightweight git fetch
+    # Note: GitHub's /repos/{owner}/{repo}/wiki API endpoint is unreliable (often returns 404 even for existing wikis)
+    # Instead, we verify access by checking if we can fetch from the wiki remote
     github_repo = os.environ.get("GITHUB_REPOSITORY", "")
     if github_repo:
-        log("Verifying WIKI_PUSH_TOKEN has wiki access...")
+        log("Verifying WIKI_PUSH_TOKEN has wiki access via git fetch...")
         try:
-            api_headers = {
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github.v3+json"
-            }
-            wiki_api_url = f"https://api.github.com/repos/{github_repo}/wiki"
-            wiki_response = requests.get(wiki_api_url, headers=api_headers, timeout=10)
-            
-            if wiki_response.status_code == 403:
-                log_error("HTTP 403 from GitHub API: WIKI_PUSH_TOKEN lacks wiki scope")
-                log_error("The token must have 'repo' (or 'public_repo') AND 'wiki' scopes.")
-                log_error("Create a new classic token at: https://github.com/settings/tokens/new")
-                return False
-            elif wiki_response.status_code == 404:
-                log_error("HTTP 404 from GitHub API: Wiki may not be enabled or token lacks access")
-                log_error("Ensure the repository has wiki enabled and the token has proper scopes.")
-                return False
-            elif wiki_response.status_code == 200:
-                log("Wiki access verified successfully")
+            fetch_result = subprocess.run(
+                ["git", "fetch", "origin"],
+                cwd=wiki_dir,
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            if fetch_result.returncode != 0:
+                stderr_output = fetch_result.stderr.lower()
+                if "authentication" in stderr_output or "403" in stderr_output or "permission" in stderr_output:
+                    log_error("Git fetch failed: WIKI_PUSH_TOKEN lacks wiki scope or authentication failed")
+                    log_error(f"Fetch error: {fetch_result.stderr.strip()}")
+                    log_error("Ensure the token has 'repo' (or 'public_repo') AND 'wiki' scopes.")
+                    log_error("Create a new classic token at: https://github.com/settings/tokens/new")
+                    return False
+                elif "404" in stderr_output or "not found" in stderr_output:
+                    log_error("Git fetch failed: Wiki may not be enabled or repository not found")
+                    log_error(f"Fetch error: {fetch_result.stderr.strip()}")
+                    return False
+                else:
+                    log(f"Git fetch returned non-zero exit code, proceeding anyway: {fetch_result.stderr.strip()}")
             else:
-                log(f"Wiki API returned status {wiki_response.status_code}, proceeding with push...")
-        except requests.exceptions.RequestException as e:
-            log_error(f"Failed to verify wiki access: {e}")
+                log("Wiki access verified successfully via git fetch")
+        except subprocess.TimeoutExpired:
+            log_error("Git fetch timed out - network issue or slow response")
+            # Continue anyway - verification is optional
+        except Exception as e:
+            log_error(f"Failed to verify wiki access via git fetch: {e}")
             # Continue anyway - verification is optional
     
     try:
