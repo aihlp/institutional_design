@@ -226,6 +226,14 @@ Text to analyze:
     # Note: removed "provider": {"require_parameters": true} - overly restrictive on free tier
     # Note: removed "plugins" - not needed for basic extraction
     
+    # Add provider routing hints for openrouter/free to ensure JSON-capable model selection
+    if model == "openrouter/free":
+        payload["provider"] = {
+            "order": ["Anthropic", "Google", "Meta"],
+            "allow_fallbacks": True,
+            "require_parameters": False
+        }
+    
     try:
         log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
         response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
@@ -248,6 +256,11 @@ Text to analyze:
                 
                 log_error(f"OpenRouter API error: {error_msg}")
                 return None, True
+        
+        # Log raw response for debugging empty responses (after error check)
+        if response.status_code == 200 and (not response.text or len(response.text.strip()) == 0):
+            log_error("Empty response body from API (HTTP 200 but no content)")
+            return None, True
         
         # Check HTTP status code - handle different error codes appropriately
         if response.status_code == 403:
@@ -280,12 +293,12 @@ Text to analyze:
             log_error(f"Response body: {response.text[:500]}")
             return None, True
         
-        # Validate response body is not empty before parsing
-        if not response.text or len(response.text.strip()) == 0:
-            log_error("Empty response body from API (HTTP 200 but no content)")
-            return None, True
-        
         result = response.json()
+        
+        # Debug: log the full response structure for empty choices
+        if not result.get("choices"):
+            log_error(f"Full API response: {json.dumps(result, indent=2)[:1000]}")
+        
         choices = result.get("choices", [])
         if not choices:
             log_error("No choices in API response")
@@ -294,6 +307,10 @@ Text to analyze:
         choice = choices[0]
         finish_reason = choice.get("finish_reason", "")
         content = choice.get("message", {}).get("content", "")
+        
+        # Debug: log if content is empty but choices exist
+        if not content and choices:
+            log_error(f"Choice has no content. Choice structure: {json.dumps(choice, indent=2)[:500]}")
         
         # Validate finish_reason is "stop" (not "length")
         if finish_reason == "length":
@@ -786,6 +803,35 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
         log_error("Create token at: https://github.com/settings/tokens/new (select 'Classic' token)")
         return False
     
+    # Verify token has wiki access before attempting push
+    github_repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if github_repo:
+        log("Verifying WIKI_PUSH_TOKEN has wiki access...")
+        try:
+            api_headers = {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            wiki_api_url = f"https://api.github.com/repos/{github_repo}/wiki"
+            wiki_response = requests.get(wiki_api_url, headers=api_headers, timeout=10)
+            
+            if wiki_response.status_code == 403:
+                log_error("HTTP 403 from GitHub API: WIKI_PUSH_TOKEN lacks wiki scope")
+                log_error("The token must have 'repo' (or 'public_repo') AND 'wiki' scopes.")
+                log_error("Create a new classic token at: https://github.com/settings/tokens/new")
+                return False
+            elif wiki_response.status_code == 404:
+                log_error("HTTP 404 from GitHub API: Wiki may not be enabled or token lacks access")
+                log_error("Ensure the repository has wiki enabled and the token has proper scopes.")
+                return False
+            elif wiki_response.status_code == 200:
+                log("Wiki access verified successfully")
+            else:
+                log(f"Wiki API returned status {wiki_response.status_code}, proceeding with push...")
+        except requests.exceptions.RequestException as e:
+            log_error(f"Failed to verify wiki access: {e}")
+            # Continue anyway - verification is optional
+    
     try:
         # Configure git user
         subprocess.run(
@@ -852,11 +898,22 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
             )
             log("Set authenticated remote URL")
         
-        # Push with conflict handling - bypass global credential helper to use token in URL
+        # Unset the URL-specific extraheader that overrides token in URL
+        # This is critical: actions/checkout sets http.https://github.com/.extraheader
+        # which takes precedence over the token embedded in the remote URL
+        subprocess.run(
+            ["git", "config", "--local", "--unset-all", "http.https://github.com/.extraheader"],
+            cwd=wiki_dir,
+            check=False,  # Don't fail if key doesn't exist
+            capture_output=True
+        )
+        log("Unset GITHUB_TOKEN extraheader to allow WIKI_PUSH_TOKEN authentication")
+        
+        # Push with conflict handling - token in URL will now be used
         for attempt in range(2):
             try:
                 subprocess.run(
-                    ["git", "-c", "http.extraHeader=", "push", "origin", "master"],
+                    ["git", "push", "origin", "master"],
                     cwd=wiki_dir,
                     check=True,
                     capture_output=True,
@@ -880,13 +937,13 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
                 if "rejected" in error_output.lower() and attempt == 0:
                     log("Push rejected, attempting rebase...")
                     subprocess.run(
-                        ["git", "-c", "http.extraHeader=", "pull", "--rebase", "origin", "master"],
+                        ["git", "pull", "--rebase", "origin", "master"],
                         cwd=wiki_dir,
                         check=True,
                         capture_output=True
                     )
                     subprocess.run(
-                        ["git", "-c", "http.extraHeader=", "push", "origin", "master"],
+                        ["git", "push", "origin", "master"],
                         cwd=wiki_dir,
                         check=True,
                         capture_output=True
