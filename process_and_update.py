@@ -226,6 +226,14 @@ Text to analyze:
     # Note: removed "provider": {"require_parameters": true} - overly restrictive on free tier
     # Note: removed "plugins" - not needed for basic extraction
     
+    # Add provider routing hints for openrouter/free to ensure JSON-capable model selection
+    if model == "openrouter/free":
+        payload["provider"] = {
+            "order": ["Anthropic", "Google", "Meta"],
+            "allow_fallbacks": True,
+            "require_parameters": False
+        }
+    
     try:
         log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
         response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
@@ -248,6 +256,11 @@ Text to analyze:
                 
                 log_error(f"OpenRouter API error: {error_msg}")
                 return None, True
+        
+        # Log raw response for debugging empty responses (after error check)
+        if response.status_code == 200 and (not response.text or len(response.text.strip()) == 0):
+            log_error("Empty response body from API (HTTP 200 but no content)")
+            return None, True
         
         # Check HTTP status code - handle different error codes appropriately
         if response.status_code == 403:
@@ -280,12 +293,12 @@ Text to analyze:
             log_error(f"Response body: {response.text[:500]}")
             return None, True
         
-        # Validate response body is not empty before parsing
-        if not response.text or len(response.text.strip()) == 0:
-            log_error("Empty response body from API (HTTP 200 but no content)")
-            return None, True
-        
         result = response.json()
+        
+        # Debug: log the full response structure for empty choices
+        if not result.get("choices"):
+            log_error(f"Full API response: {json.dumps(result, indent=2)[:1000]}")
+        
         choices = result.get("choices", [])
         if not choices:
             log_error("No choices in API response")
@@ -294,6 +307,10 @@ Text to analyze:
         choice = choices[0]
         finish_reason = choice.get("finish_reason", "")
         content = choice.get("message", {}).get("content", "")
+        
+        # Debug: log if content is empty but choices exist
+        if not content and choices:
+            log_error(f"Choice has no content. Choice structure: {json.dumps(choice, indent=2)[:500]}")
         
         # Validate finish_reason is "stop" (not "length")
         if finish_reason == "length":
