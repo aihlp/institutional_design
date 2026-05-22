@@ -824,33 +824,41 @@ def push_wiki_changes(wiki_dir: Path, source: str) -> bool:
         log_error("Create token at: https://github.com/settings/tokens/new (select 'Classic' token)")
         return False
     
-    # Verify token has wiki access before attempting push
+    # Verify token has wiki access by attempting a lightweight git fetch
+    # Note: GitHub's /repos/{owner}/{repo}/wiki API endpoint is unreliable (often returns 404 even for existing wikis)
+    # Instead, we verify access by checking if we can fetch from the wiki remote
     github_repo = os.environ.get("GITHUB_REPOSITORY", "")
     if github_repo:
-        log("Verifying WIKI_PUSH_TOKEN has wiki access...")
+        log("Verifying WIKI_PUSH_TOKEN has wiki access via git fetch...")
         try:
-            api_headers = {
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github.v3+json"
-            }
-            wiki_api_url = f"https://api.github.com/repos/{github_repo}/wiki"
-            wiki_response = requests.get(wiki_api_url, headers=api_headers, timeout=10)
-            
-            if wiki_response.status_code == 403:
-                log_error("HTTP 403 from GitHub API: WIKI_PUSH_TOKEN lacks wiki scope")
-                log_error("The token must have 'repo' (or 'public_repo') AND 'wiki' scopes.")
-                log_error("Create a new classic token at: https://github.com/settings/tokens/new")
-                return False
-            elif wiki_response.status_code == 404:
-                log_error("HTTP 404 from GitHub API: Wiki may not be enabled or token lacks access")
-                log_error("Ensure the repository has wiki enabled and the token has proper scopes.")
-                return False
-            elif wiki_response.status_code == 200:
-                log("Wiki access verified successfully")
+            fetch_result = subprocess.run(
+                ["git", "fetch", "origin"],
+                cwd=wiki_dir,
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            if fetch_result.returncode != 0:
+                stderr_output = fetch_result.stderr.lower()
+                if "authentication" in stderr_output or "403" in stderr_output or "permission" in stderr_output:
+                    log_error("Git fetch failed: WIKI_PUSH_TOKEN lacks wiki scope or authentication failed")
+                    log_error(f"Fetch error: {fetch_result.stderr.strip()}")
+                    log_error("Ensure the token has 'repo' (or 'public_repo') AND 'wiki' scopes.")
+                    log_error("Create a new classic token at: https://github.com/settings/tokens/new")
+                    return False
+                elif "404" in stderr_output or "not found" in stderr_output:
+                    log_error("Git fetch failed: Wiki may not be enabled or repository not found")
+                    log_error(f"Fetch error: {fetch_result.stderr.strip()}")
+                    return False
+                else:
+                    log(f"Git fetch returned non-zero exit code, proceeding anyway: {fetch_result.stderr.strip()}")
             else:
-                log(f"Wiki API returned status {wiki_response.status_code}, proceeding with push...")
-        except requests.exceptions.RequestException as e:
-            log_error(f"Failed to verify wiki access: {e}")
+                log("Wiki access verified successfully via git fetch")
+        except subprocess.TimeoutExpired:
+            log_error("Git fetch timed out - network issue or slow response")
+            # Continue anyway - verification is optional
+        except Exception as e:
+            log_error(f"Failed to verify wiki access via git fetch: {e}")
             # Continue anyway - verification is optional
     
     try:
