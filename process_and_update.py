@@ -24,62 +24,15 @@ import json5
 # Configuration
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openrouter/free"  # Free model router
-DEFAULT_PROMPT_TEMPLATE = """You are a precise data extraction tool. Your entire response must be a single valid JSON object and nothing else. Do not include any markdown formatting, explanations, or code fences.
+DEFAULT_PROMPT_TEMPLATE = """You are a precise knowledge extraction tool. Extract from the provided text exactly three categories:
+- definitions: explanations of terms or concepts
+- facts: verifiable statements or data points
+- research: investigative insights, study results, or hypotheses
 
-Your task is to analyze text and extract knowledge organized into two fundamental dimensions:
+Output a single valid JSON object with these keys: "definitions", "facts", "research". Each value is an array of objects with keys "text" and "context". The "context" field is optional and contains the sentence from which the entity was derived. Do not include any additional text or markdown formatting.
 
-BASIC (STATIC) PARTS - The constituent elements:
-1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary; foundational conceptual primitives
-2. FACTS: Verifiable statements, data points, empirical observations, or established information
-3. CONCEPTS: Abstract ideas, theoretical constructs, or mental models that organize thinking
-4. ENTITIES: Concrete objects, actors, organizations, or identifiable things in the domain
+Text: {text}"""
 
-DYNAMIC (RELATIONAL) PARTS - The connections and flows between elements:
-5. RELATIONSHIPS: Connections, associations, or links between entities/concepts (e.g., "causes", "influences", "part-of")
-6. PROCESSES: Sequences of actions, transformations, or temporal flows that describe how things change
-7. MECHANISMS: Causal pathways, explanatory logics, or functional operations that produce outcomes
-8. CONTEXTS: Situational conditions, environmental factors, or boundary conditions that shape meaning
-
-Return your analysis as a JSON object with exactly eight arrays: "definitions", "facts", "concepts", "entities", "relationships", "processes", "mechanisms", and "contexts".
-Each item should have a "text" field (the extracted content), optionally a "context" field (additional relevant information), and for dynamic parts, optionally "source" and "target" fields to specify relinks.
-
-Example format:
-{
-  "definitions": [
-    {"text": "Term explanation", "context": "Related concept"}
-  ],
-  "facts": [
-    {"text": "Verifiable statement"}
-  ],
-  "concepts": [
-    {"text": "Abstract idea or theoretical construct", "context": "Domain area"}
-  ],
-  "entities": [
-    {"text": "Concrete object or actor", "context": "Type or category"}
-  ],
-  "relationships": [
-    {"text": "Connection description", "source": "Entity A", "target": "Entity B"}
-  ],
-  "processes": [
-    {"text": "Process description", "source": "Starting state", "target": "Ending state"}
-  ],
-  "mechanisms": [
-    {"text": "Causal mechanism", "source": "Cause", "target": "Effect"}
-  ],
-  "contexts": [
-    {"text": "Contextual condition", "context": "Applicable domain"}
-  ]
-}
-
-CRITICAL INSTRUCTIONS:
-- Output ONLY the raw JSON object. No markdown, no code blocks, no explanations.
-- Do not wrap your response in ```json or ``` markers.
-- Do not add any text before or after the JSON object.
-- The JSON must start with { and end with }.
-- If you cannot extract any entities from a category, use an empty array [].
-- For DYNAMIC parts (relationships, processes, mechanisms), try to identify source and target when possible to enable relinking.
-
-Begin your response with { and end with }."""
 MAX_RETRIES = 2  # Maximum 2 attempts: one with json_schema, one with json_object fallback
 RETRY_DELAY_BASE = 2  # seconds
 RATE_LIMIT_DELAY = 30  # seconds to wait on 429 errors
@@ -271,18 +224,23 @@ def call_openrouter(text: str) -> dict | None:
         return None
     
     model = os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
-    prompt_template = os.environ.get("OPENROUTER_PROMPT_TEMPLATE", DEFAULT_PROMPT_TEMPLATE)
+    
+    # Get prompt template from environment, with mandatory fallback to default
+    env_prompt = os.environ.get("OPENROUTER_PROMPT_TEMPLATE", "")
+    if not env_prompt or not env_prompt.strip():
+        prompt_template = DEFAULT_PROMPT_TEMPLATE
+        log("Using default prompt template (environment variable empty or missing)")
+    else:
+        prompt_template = env_prompt
+        log("Using custom prompt template from environment")
     
     # Get repo URL for HTTP-Referer header
     github_server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
     github_repo = os.environ.get("GITHUB_REPOSITORY", "unknown/repo")
     repo_url = f"{github_server}/{github_repo}"
     
-    # Build user message with clear instruction
-    user_prompt = f"""{prompt_template}
-
-Text to analyze:
-{text}"""
+    # Build user message by replacing {text} placeholder in template
+    user_prompt = prompt_template.replace("{text}", text)
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -305,7 +263,8 @@ Text to analyze:
     try:
         log(f"Calling OpenRouter API...")
         log(f"Model: {model}")
-        log(f"Request payload: {json.dumps(payload)}")
+        log(f"Prompt template (first 300 chars): {prompt_template[:300]}...")
+        log(f"Request payload (first 500 chars): {json.dumps(payload)[:500]}...")
         response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
         
         # Log raw response for debugging before any error handling
