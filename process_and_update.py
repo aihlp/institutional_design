@@ -446,43 +446,44 @@ Text to analyze:
 
 def normalize_json_to_structure(data: dict) -> dict:
     """
-    Normalize any JSON object to the required six-category structure.
+    Normalize any JSON object to the required eight-category structure.
     
     Uses heuristic key mapping:
     - definitions, definition, defines, glossary → definitions
     - facts, fact, findings, observations → facts
-    - theoretical_frameworks, frameworks, theory, explanatory_models → theoretical_frameworks
-    - methodologies, methods, tools, operationalization, measurement → methodologies
-    - empirical_cases, cases, examples, case_studies, fracture_points → empirical_cases
-    - research, analysis, insights, key_arguments, key_themes → research
-    - Everything else → facts (safe default)
+    - concepts, concept, ideas, constructs → concepts
+    - entities, entity, actors, organizations → entities
+    - relationships, relationship, connections, links → relationships
+    - processes, process, sequences, flows → processes
+    - mechanisms, mechanism, causal pathways → mechanisms
+    - contexts, context, conditions, boundaries → contexts
     
     Args:
         data: Any valid JSON dict
         
     Returns:
-        Normalized dict with definitions, facts, theoretical_frameworks, methodologies, empirical_cases, research arrays
+        Normalized dict with definitions, facts, concepts, entities, relationships, processes, mechanisms, contexts arrays
     """
     result = {
         "definitions": [], 
         "facts": [], 
-        "theoretical_frameworks": [], 
-        "methodologies": [], 
-        "empirical_cases": [], 
-        "research": []
+        "concepts": [], 
+        "entities": [], 
+        "relationships": [], 
+        "processes": [], 
+        "mechanisms": [], 
+        "contexts": []
     }
     
     # Key category mappings
     definition_keys = {"definitions", "definition", "defines", "glossary", "terms", "terminology"}
     fact_keys = {"facts", "fact", "findings", "observations", "data_points", "statements", "information"}
-    theoretical_framework_keys = {"theoretical_frameworks", "frameworks", "theory", "explanatory_models", 
-                                   "theoretical_scaffold", "causal_models", "mechanisms"}
-    methodology_keys = {"methodologies", "methods", "tools", "operationalization", "measurement", 
-                        "analytical_procedures", "mathematical_tools", "techniques"}
-    empirical_case_keys = {"empirical_cases", "cases", "examples", "case_studies", "fracture_points", 
-                           "documented_phenomena", "empirical_examples"}
-    research_keys = {"research", "analysis", "insights", "key_arguments", "key_themes", "hypotheses", 
-                     "studies", "arguments", "themes", "conclusions"}
+    concept_keys = {"concepts", "concept", "ideas", "constructs", "theoretical_constructs", "mental_models"}
+    entity_keys = {"entities", "entity", "actors", "organizations", "objects", "things"}
+    relationship_keys = {"relationships", "relationship", "connections", "links", "associations", "relations"}
+    process_keys = {"processes", "process", "sequences", "flows", "transformations", "actions"}
+    mechanism_keys = {"mechanisms", "mechanism", "causal_pathways", "explanatory_logics", "functional_operations"}
+    context_keys = {"contexts", "context", "conditions", "boundaries", "situational_factors", "environmental_factors"}
     
     def extract_text_from_item(item) -> dict | None:
         """Extract text and context from various item formats."""
@@ -534,14 +535,18 @@ def normalize_json_to_structure(data: dict) -> dict:
             return "definitions"
         elif key_lower in fact_keys:
             return "facts"
-        elif key_lower in theoretical_framework_keys:
-            return "theoretical_frameworks"
-        elif key_lower in methodology_keys:
-            return "methodologies"
-        elif key_lower in empirical_case_keys:
-            return "empirical_cases"
-        elif key_lower in research_keys:
-            return "research"
+        elif key_lower in concept_keys:
+            return "concepts"
+        elif key_lower in entity_keys:
+            return "entities"
+        elif key_lower in relationship_keys:
+            return "relationships"
+        elif key_lower in process_keys:
+            return "processes"
+        elif key_lower in mechanism_keys:
+            return "mechanisms"
+        elif key_lower in context_keys:
+            return "contexts"
         else:
             return "facts"  # Safe default
     
@@ -1264,18 +1269,22 @@ def main():
     total_entities = (
         len(extracted.get("definitions", [])) +
         len(extracted.get("facts", [])) +
-        len(extracted.get("theoretical_frameworks", [])) +
-        len(extracted.get("methodologies", [])) +
-        len(extracted.get("empirical_cases", [])) +
-        len(extracted.get("research", []))
+        len(extracted.get("concepts", [])) +
+        len(extracted.get("entities", [])) +
+        len(extracted.get("relationships", [])) +
+        len(extracted.get("processes", [])) +
+        len(extracted.get("mechanisms", [])) +
+        len(extracted.get("contexts", []))
     )
     log(f"Extracted {total_entities} entities:")
     log(f"  - Definitions: {len(extracted.get('definitions', []))}")
     log(f"  - Facts: {len(extracted.get('facts', []))}")
-    log(f"  - Theoretical Frameworks: {len(extracted.get('theoretical_frameworks', []))}")
-    log(f"  - Methodologies: {len(extracted.get('methodologies', []))}")
-    log(f"  - Empirical Cases: {len(extracted.get('empirical_cases', []))}")
-    log(f"  - Research: {len(extracted.get('research', []))}")
+    log(f"  - Concepts: {len(extracted.get('concepts', []))}")
+    log(f"  - Entities: {len(extracted.get('entities', []))}")
+    log(f"  - Relationships: {len(extracted.get('relationships', []))}")
+    log(f"  - Processes: {len(extracted.get('processes', []))}")
+    log(f"  - Mechanisms: {len(extracted.get('mechanisms', []))}")
+    log(f"  - Contexts: {len(extracted.get('contexts', []))}")
     
     if total_entities == 0:
         log("No entities extracted. Nothing to add to wiki.")
