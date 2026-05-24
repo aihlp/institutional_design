@@ -24,12 +24,9 @@ import json5
 # Configuration
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openrouter/free"  # Free model router
-DEFAULT_PROMPT_TEMPLATE = """You are a precise knowledge extraction tool. Extract from the provided text exactly three categories:
-- definitions: explanations of terms or concepts
-- facts: verifiable statements or data points
-- research: investigative insights, study results, or hypotheses
+DEFAULT_PROMPT_TEMPLATE = """You are a precise knowledge extraction tool. Extract all valuable entities from the provided text. The LLM should dynamically determine the appropriate categories based on the content (e.g., definitions, facts, research, concepts, entities, relationships, processes, mechanisms, contexts, or any other relevant categories).
 
-Output a single valid JSON object with these keys: "definitions", "facts", "research". Each value is an array of objects with keys "text" and "context". The "context" field is optional and contains the sentence from which the entity was derived. Do not include any additional text or markdown formatting.
+Output a single valid JSON object where each key is a category name and each value is an array of objects with keys "text" and "context". The "context" field is optional and contains the sentence from which the entity was derived. Do not include any additional text or markdown formatting.
 
 Text: {text}"""
 
@@ -227,12 +224,22 @@ def call_openrouter(text: str) -> dict | None:
     
     # Get prompt template from environment, with mandatory fallback to default
     env_prompt = os.environ.get("OPENROUTER_PROMPT_TEMPLATE", "")
+    
+    # Log the raw environment variable value for debugging
+    log(f"OPENROUTER_PROMPT_TEMPLATE env var length: {len(env_prompt) if env_prompt else 0}")
+    log(f"OPENROUTER_PROMPT_TEMPLATE env var is None: {env_prompt is None}")
+    log(f"OPENROUTER_PROMPT_TEMPLATE env var is empty string: {env_prompt == ''}")
+    log(f"OPENROUTER_PROMPT_TEMPLATE env var stripped length: {len(env_prompt.strip()) if env_prompt else 0}")
+    
     if not env_prompt or not env_prompt.strip():
         prompt_template = DEFAULT_PROMPT_TEMPLATE
-        log("Using default prompt template (environment variable empty or missing)")
+        log("Using default prompt template (environment variable empty, None, or whitespace-only)")
+        log(f"Default prompt template length: {len(DEFAULT_PROMPT_TEMPLATE)} chars")
     else:
         prompt_template = env_prompt
         log("Using custom prompt template from environment")
+        log(f"Custom prompt template length: {len(prompt_template)} chars")
+        log(f"Custom prompt template (first 300 chars): {prompt_template[:300]}...")
     
     # Get repo URL for HTTP-Referer header
     github_server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
@@ -241,6 +248,10 @@ def call_openrouter(text: str) -> dict | None:
     
     # Build user message by replacing {text} placeholder in template
     user_prompt = prompt_template.replace("{text}", text)
+    
+    # Log the final user prompt for debugging
+    log(f"Final user prompt length: {len(user_prompt)} chars")
+    log(f"Final user prompt (first 500 chars): {user_prompt[:500]}...")
 
     headers = {
         "Authorization": f"Bearer {api_key}",
