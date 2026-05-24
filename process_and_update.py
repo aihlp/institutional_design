@@ -26,13 +26,16 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openrouter/free"  # Free model router
 DEFAULT_PROMPT_TEMPLATE = """You are a precise data extraction tool. Your entire response must be a single valid JSON object and nothing else. Do not include any markdown formatting, explanations, or code fences.
 
-Your task is to analyze text and extract three types of entities:
+Your task is to analyze text and extract six fundamental types of entities for institutional theory knowledge organization:
 
-1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary
-2. FACTS: Verifiable statements, data points, or established information  
-3. RESEARCH: Insights, hypotheses, study results, or emerging findings
+1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary; foundational conceptual primitives
+2. FACTS: Verifiable statements, data points, empirical observations, or established information
+3. THEORETICAL_FRAMEWORKS: Explanatory mechanisms, theoretical scaffolds, causal models, or conceptual relationships
+4. METHODOLOGIES: Mathematical tools, operationalization techniques, measurement approaches, or analytical procedures
+5. EMPIRICAL_CASES: Concrete examples, case studies, fracture points, or documented phenomena
+6. RESEARCH: Insights, hypotheses, study results, emerging findings, or future research directions
 
-Return your analysis as a JSON object with exactly three arrays: "definitions", "facts", and "research".
+Return your analysis as a JSON object with exactly six arrays: "definitions", "facts", "theoretical_frameworks", "methodologies", "empirical_cases", and "research".
 Each item should have a "text" field (the extracted content) and optionally a "context" field (additional relevant information).
 
 Example format:
@@ -42,6 +45,15 @@ Example format:
   ],
   "facts": [
     {"text": "Verifiable statement"}
+  ],
+  "theoretical_frameworks": [
+    {"text": "Theoretical mechanism or explanatory model", "context": "Associated theory"}
+  ],
+  "methodologies": [
+    {"text": "Method or tool description", "context": "Application domain"}
+  ],
+  "empirical_cases": [
+    {"text": "Case study or empirical example", "context": "Source or setting"}
   ],
   "research": [
     {"text": "Research insight", "context": "Study reference"}
@@ -99,6 +111,39 @@ def build_extraction_json_schema() -> dict:
                         "required": ["text"]
                     }
                 },
+                "theoretical_frameworks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "context": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
+                },
+                "methodologies": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "context": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
+                },
+                "empirical_cases": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "context": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
+                },
                 "research": {
                     "type": "array",
                     "items": {
@@ -111,7 +156,7 @@ def build_extraction_json_schema() -> dict:
                     }
                 }
             },
-            "required": ["definitions", "facts", "research"]
+            "required": ["definitions", "facts", "theoretical_frameworks", "methodologies", "empirical_cases", "research"]
         }
     }
 
@@ -364,11 +409,14 @@ Text to analyze:
 
 def normalize_json_to_structure(data: dict) -> dict:
     """
-    Normalize any JSON object to the required {definitions, facts, research} structure.
+    Normalize any JSON object to the required six-category structure.
     
     Uses heuristic key mapping:
     - definitions, definition, defines, glossary → definitions
     - facts, fact, findings, observations → facts
+    - theoretical_frameworks, frameworks, theory, explanatory_models → theoretical_frameworks
+    - methodologies, methods, tools, operationalization, measurement → methodologies
+    - empirical_cases, cases, examples, case_studies, fracture_points → empirical_cases
     - research, analysis, insights, key_arguments, key_themes → research
     - Everything else → facts (safe default)
     
@@ -376,13 +424,26 @@ def normalize_json_to_structure(data: dict) -> dict:
         data: Any valid JSON dict
         
     Returns:
-        Normalized dict with definitions, facts, research arrays
+        Normalized dict with definitions, facts, theoretical_frameworks, methodologies, empirical_cases, research arrays
     """
-    result = {"definitions": [], "facts": [], "research": []}
+    result = {
+        "definitions": [], 
+        "facts": [], 
+        "theoretical_frameworks": [], 
+        "methodologies": [], 
+        "empirical_cases": [], 
+        "research": []
+    }
     
     # Key category mappings
     definition_keys = {"definitions", "definition", "defines", "glossary", "terms", "terminology"}
     fact_keys = {"facts", "fact", "findings", "observations", "data_points", "statements", "information"}
+    theoretical_framework_keys = {"theoretical_frameworks", "frameworks", "theory", "explanatory_models", 
+                                   "theoretical_scaffold", "causal_models", "mechanisms"}
+    methodology_keys = {"methodologies", "methods", "tools", "operationalization", "measurement", 
+                        "analytical_procedures", "mathematical_tools", "techniques"}
+    empirical_case_keys = {"empirical_cases", "cases", "examples", "case_studies", "fracture_points", 
+                           "documented_phenomena", "empirical_examples"}
     research_keys = {"research", "analysis", "insights", "key_arguments", "key_themes", "hypotheses", 
                      "studies", "arguments", "themes", "conclusions"}
     
@@ -436,6 +497,12 @@ def normalize_json_to_structure(data: dict) -> dict:
             return "definitions"
         elif key_lower in fact_keys:
             return "facts"
+        elif key_lower in theoretical_framework_keys:
+            return "theoretical_frameworks"
+        elif key_lower in methodology_keys:
+            return "methodologies"
+        elif key_lower in empirical_case_keys:
+            return "empirical_cases"
         elif key_lower in research_keys:
             return "research"
         else:
@@ -776,7 +843,7 @@ def update_wiki(wiki_dir: Path, extracted_data: dict, date_str: str, source: str
     
     Args:
         wiki_dir: Wiki directory
-        extracted_data: Dict with definitions, facts, research arrays
+        extracted_data: Dict with definitions, facts, theoretical_frameworks, methodologies, empirical_cases, research arrays
         date_str: Date string for headings
         source: Source label
         
@@ -786,6 +853,9 @@ def update_wiki(wiki_dir: Path, extracted_data: dict, date_str: str, source: str
     pages = {
         "Definitions": extracted_data.get("definitions", []),
         "Facts": extracted_data.get("facts", []),
+        "Theoretical_Frameworks": extracted_data.get("theoretical_frameworks", []),
+        "Methodologies": extracted_data.get("methodologies", []),
+        "Empirical_Cases": extracted_data.get("empirical_cases", []),
         "Research": extracted_data.get("research", [])
     }
     
@@ -1023,11 +1093,17 @@ def main():
     total_entities = (
         len(extracted.get("definitions", [])) +
         len(extracted.get("facts", [])) +
+        len(extracted.get("theoretical_frameworks", [])) +
+        len(extracted.get("methodologies", [])) +
+        len(extracted.get("empirical_cases", [])) +
         len(extracted.get("research", []))
     )
     log(f"Extracted {total_entities} entities:")
     log(f"  - Definitions: {len(extracted.get('definitions', []))}")
     log(f"  - Facts: {len(extracted.get('facts', []))}")
+    log(f"  - Theoretical Frameworks: {len(extracted.get('theoretical_frameworks', []))}")
+    log(f"  - Methodologies: {len(extracted.get('methodologies', []))}")
+    log(f"  - Empirical Cases: {len(extracted.get('empirical_cases', []))}")
     log(f"  - Research: {len(extracted.get('research', []))}")
     
     if total_entities == 0:

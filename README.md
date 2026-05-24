@@ -55,15 +55,21 @@ git push
 
 ## Output
 
-The workflow extracts three categories of entities:
+The workflow extracts six fundamental categories of entities for institutional theory knowledge organization:
 
-- **Definitions**: Explanations of terms, concepts, or specialized vocabulary
-- **Facts**: Verifiable statements, data points, or established information
-- **Research**: Insights, hypotheses, study results, or emerging findings
+- **Definitions**: Explanations of terms, concepts, or specialized vocabulary; foundational conceptual primitives
+- **Facts**: Verifiable statements, data points, empirical observations, or established information
+- **Theoretical Frameworks**: Explanatory mechanisms, theoretical scaffolds, causal models, or conceptual relationships
+- **Methodologies**: Mathematical tools, operationalization techniques, measurement approaches, or analytical procedures
+- **Empirical Cases**: Concrete examples, case studies, fracture points, or documented phenomena
+- **Research**: Insights, hypotheses, study results, emerging findings, or future research directions
 
 These are appended to corresponding wiki pages:
 - `Definitions.md`
 - `Facts.md`
+- `Theoretical_Frameworks.md`
+- `Methodologies.md`
+- `Empirical_Cases.md`
 - `Research.md`
 
 Each entry is organized under a dated heading:
