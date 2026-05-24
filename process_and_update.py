@@ -247,6 +247,12 @@ def call_openrouter(text: str) -> tuple[dict | None, bool]:
     repo_url = f"{github_server}/{github_repo}"
     
     # Build user message by replacing {text} placeholder in template
+    # Truncate input text if it's too large to avoid API errors
+    max_input_length = 100000  # Maximum input length allowed by API
+    if len(text) > max_input_length:
+        log(f"Input text too long ({len(text)} chars), truncating to {max_input_length} chars")
+        text = text[:max_input_length] + "..."
+    
     user_prompt = prompt_template.replace("{text}", text)
     
     # Log the final user prompt for debugging
