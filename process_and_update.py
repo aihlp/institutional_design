@@ -330,12 +330,9 @@ Text to analyze:
             "meta-llama/llama-3-8b-instruct"
         ]
     
-    # CRITICAL: For models that don't support json_schema (like nvidia/nemotron),
-    # we need to use json_object format instead. Check if model is known to not support json_schema
-    non_schema_models = ["nvidia/nemotron", "nemotron"]
-    if any(ns in model.lower() for ns in non_schema_models) and use_schema:
-        log("Detected model that may not support json_schema, using json_object format instead")
-        payload["response_format"] = {"type": "json_object"}
+    # Note: All modern LLMs can return JSON. The parser handles broken/malformed JSON
+    # using multiple fallback strategies (json → json5 → sanitization), so we always
+    # use json_schema format to get structured output when possible.
     
     try:
         log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
