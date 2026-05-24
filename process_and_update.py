@@ -330,6 +330,13 @@ Text to analyze:
             "meta-llama/llama-3-8b-instruct"
         ]
     
+    # CRITICAL: For models that don't support json_schema (like nvidia/nemotron),
+    # we need to use json_object format instead. Check if model is known to not support json_schema
+    non_schema_models = ["nvidia/nemotron", "nemotron"]
+    if any(ns in model.lower() for ns in non_schema_models) and use_schema:
+        log("Detected model that may not support json_schema, using json_object format instead")
+        payload["response_format"] = {"type": "json_object"}
+    
     try:
         log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
         response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
@@ -405,6 +412,9 @@ Text to analyze:
         choice = choices[0]
         finish_reason = choice.get("finish_reason", "")
         content = choice.get("message", {}).get("content", "")
+        
+        # Debug: log raw content for debugging (first 500 chars)
+        log(f"Raw API content (first 500 chars): {content[:500] if content else 'EMPTY'}")
         
         # Debug: log if content is empty but choices exist
         if not content and choices:
