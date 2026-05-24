@@ -55,28 +55,26 @@ git push
 
 ## Output
 
-The workflow extracts six fundamental categories of entities for institutional theory knowledge organization:
+The workflow extracts knowledge organized into **two fundamental dimensions**: Basic (static) parts and Dynamic (relational) parts.
 
+### Basic (Static) Parts - Constituent Elements:
 - **Definitions**: Explanations of terms, concepts, or specialized vocabulary; foundational conceptual primitives
 - **Facts**: Verifiable statements, data points, empirical observations, or established information
-- **Theoretical Frameworks**: Explanatory mechanisms, theoretical scaffolds, causal models, or conceptual relationships
-- **Methodologies**: Mathematical tools, operationalization techniques, measurement approaches, or analytical procedures
-- **Empirical Cases**: Concrete examples, case studies, fracture points, or documented phenomena
-- **Research**: Insights, hypotheses, study results, emerging findings, or future research directions
+- **Concepts**: Abstract ideas, theoretical constructs, or mental models that organize thinking
+- **Entities**: Concrete objects, actors, organizations, or identifiable things in the domain
+- **Contexts**: Situational conditions, environmental factors, or boundary conditions that shape meaning
+
+### Dynamic (Relational) Parts - Connections and Flows:
+- **Relationships**: Connections, associations, or links between entities/concepts (e.g., "causes", "influences", "part-of")
+- **Processes**: Sequences of actions, transformations, or temporal flows that describe how things change
+- **Mechanisms**: Causal pathways, explanatory logics, or functional operations that produce outcomes
 
 These are appended to corresponding wiki pages:
-- `Definitions.md`
-- `Facts.md`
-- `Theoretical_Frameworks.md`
-- `Methodologies.md`
-- `Empirical_Cases.md`
-- `Research.md`
+- `Definitions.md`, `Facts.md`, `Concepts.md`, `Entities.md`, `Contexts.md` (basic parts)
+- `Relationships.md`, `Processes.md`, `Mechanisms.md` (dynamic parts with relinking)
+- `Home.md` (automatically generated index with cross-references)
 
-Each entry is organized under a dated heading:
-```markdown
-## YYYY-MM-DD – Source Label
-- **Entity text** *(context: additional info)*
-```
+Dynamic entries include **relinking** via wiki-style `[[source]] → [[target]]` notation to enable navigation between connected knowledge elements.
 
 ## Files
 

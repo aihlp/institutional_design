@@ -26,17 +26,22 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODEL = "openrouter/free"  # Free model router
 DEFAULT_PROMPT_TEMPLATE = """You are a precise data extraction tool. Your entire response must be a single valid JSON object and nothing else. Do not include any markdown formatting, explanations, or code fences.
 
-Your task is to analyze text and extract six fundamental types of entities for institutional theory knowledge organization:
+Your task is to analyze text and extract knowledge organized into two fundamental dimensions:
 
+BASIC (STATIC) PARTS - The constituent elements:
 1. DEFINITIONS: Explanations of terms, concepts, or specialized vocabulary; foundational conceptual primitives
 2. FACTS: Verifiable statements, data points, empirical observations, or established information
-3. THEORETICAL_FRAMEWORKS: Explanatory mechanisms, theoretical scaffolds, causal models, or conceptual relationships
-4. METHODOLOGIES: Mathematical tools, operationalization techniques, measurement approaches, or analytical procedures
-5. EMPIRICAL_CASES: Concrete examples, case studies, fracture points, or documented phenomena
-6. RESEARCH: Insights, hypotheses, study results, emerging findings, or future research directions
+3. CONCEPTS: Abstract ideas, theoretical constructs, or mental models that organize thinking
+4. ENTITIES: Concrete objects, actors, organizations, or identifiable things in the domain
 
-Return your analysis as a JSON object with exactly six arrays: "definitions", "facts", "theoretical_frameworks", "methodologies", "empirical_cases", and "research".
-Each item should have a "text" field (the extracted content) and optionally a "context" field (additional relevant information).
+DYNAMIC (RELATIONAL) PARTS - The connections and flows between elements:
+5. RELATIONSHIPS: Connections, associations, or links between entities/concepts (e.g., "causes", "influences", "part-of")
+6. PROCESSES: Sequences of actions, transformations, or temporal flows that describe how things change
+7. MECHANISMS: Causal pathways, explanatory logics, or functional operations that produce outcomes
+8. CONTEXTS: Situational conditions, environmental factors, or boundary conditions that shape meaning
+
+Return your analysis as a JSON object with exactly eight arrays: "definitions", "facts", "concepts", "entities", "relationships", "processes", "mechanisms", and "contexts".
+Each item should have a "text" field (the extracted content), optionally a "context" field (additional relevant information), and for dynamic parts, optionally "source" and "target" fields to specify relinks.
 
 Example format:
 {
@@ -46,17 +51,23 @@ Example format:
   "facts": [
     {"text": "Verifiable statement"}
   ],
-  "theoretical_frameworks": [
-    {"text": "Theoretical mechanism or explanatory model", "context": "Associated theory"}
+  "concepts": [
+    {"text": "Abstract idea or theoretical construct", "context": "Domain area"}
   ],
-  "methodologies": [
-    {"text": "Method or tool description", "context": "Application domain"}
+  "entities": [
+    {"text": "Concrete object or actor", "context": "Type or category"}
   ],
-  "empirical_cases": [
-    {"text": "Case study or empirical example", "context": "Source or setting"}
+  "relationships": [
+    {"text": "Connection description", "source": "Entity A", "target": "Entity B"}
   ],
-  "research": [
-    {"text": "Research insight", "context": "Study reference"}
+  "processes": [
+    {"text": "Process description", "source": "Starting state", "target": "Ending state"}
+  ],
+  "mechanisms": [
+    {"text": "Causal mechanism", "source": "Cause", "target": "Effect"}
+  ],
+  "contexts": [
+    {"text": "Contextual condition", "context": "Applicable domain"}
   ]
 }
 
@@ -66,6 +77,7 @@ CRITICAL INSTRUCTIONS:
 - Do not add any text before or after the JSON object.
 - The JSON must start with { and end with }.
 - If you cannot extract any entities from a category, use an empty array [].
+- For DYNAMIC parts (relationships, processes, mechanisms), try to identify source and target when possible to enable relinking.
 
 Begin your response with { and end with }."""
 MAX_RETRIES = 2  # Maximum 2 attempts: one with json_schema, one with json_object fallback
@@ -111,7 +123,7 @@ def build_extraction_json_schema() -> dict:
                         "required": ["text"]
                     }
                 },
-                "theoretical_frameworks": {
+                "concepts": {
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -122,7 +134,7 @@ def build_extraction_json_schema() -> dict:
                         "required": ["text"]
                     }
                 },
-                "methodologies": {
+                "entities": {
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -133,18 +145,43 @@ def build_extraction_json_schema() -> dict:
                         "required": ["text"]
                     }
                 },
-                "empirical_cases": {
+                "relationships": {
                     "type": "array",
                     "items": {
                         "type": "object",
                         "properties": {
                             "text": {"type": "string"},
-                            "context": {"type": "string"}
+                            "source": {"type": "string"},
+                            "target": {"type": "string"}
                         },
                         "required": ["text"]
                     }
                 },
-                "research": {
+                "processes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "source": {"type": "string"},
+                            "target": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
+                },
+                "mechanisms": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "source": {"type": "string"},
+                            "target": {"type": "string"}
+                        },
+                        "required": ["text"]
+                    }
+                },
+                "contexts": {
                     "type": "array",
                     "items": {
                         "type": "object",
@@ -156,7 +193,7 @@ def build_extraction_json_schema() -> dict:
                     }
                 }
             },
-            "required": ["definitions", "facts", "theoretical_frameworks", "methodologies", "empirical_cases", "research"]
+            "required": ["definitions", "facts", "concepts", "entities", "relationships", "processes", "mechanisms", "contexts"]
         }
     }
 
@@ -837,30 +874,137 @@ def append_entities_to_page(existing_content: str, entities: list[dict], date_st
     return content
 
 
+def format_dynamic_entry(entry: dict, category: str) -> str:
+    """
+    Format a dynamic entry (relationships, processes, mechanisms) with relinking information.
+    
+    Args:
+        entry: Entry dict with text, source, target fields
+        category: Category name for formatting
+        
+    Returns:
+        Formatted markdown string
+    """
+    text = entry.get("text", "")
+    source = entry.get("source", "")
+    target = entry.get("target", "")
+    context = entry.get("context", "")
+    
+    # Build the base entry
+    parts = [f"- **{text}**"]
+    
+    # Add relink information if present
+    if source and target:
+        parts.append(f"*(links: [[{source}]] → [[{target}]])*)")
+    elif source:
+        parts.append(f"*(from: [[{source}]])*)")
+    elif target:
+        parts.append(f"*(to: [[{target}]])*)")
+    
+    # Add context if present
+    if context:
+        parts.append(f"*(context: {context})*")
+    
+    return " ".join(parts)
+
+
+def generate_home_page(extracted_data: dict) -> str:
+    """
+    Generate Home page content with index and cross-references to all knowledge categories.
+    
+    Args:
+        extracted_data: Dict with all eight entity arrays
+        
+    Returns:
+        Markdown content for Home page
+    """
+    content = "# Knowledge Base Index\n\n"
+    content += "This wiki organizes knowledge into **two fundamental dimensions**: Basic (static) parts and Dynamic (relational) parts.\n\n"
+    
+    # Basic (Static) Parts Section
+    content += "## Basic (Static) Parts\n\n"
+    content += "The constituent elements that make up the knowledge base:\n\n"
+    
+    basic_categories = [
+        ("Definitions", "definitions", "Explanations of terms, concepts, or specialized vocabulary"),
+        ("Facts", "facts", "Verifiable statements, data points, empirical observations"),
+        ("Concepts", "concepts", "Abstract ideas, theoretical constructs, mental models"),
+        ("Entities", "entities", "Concrete objects, actors, organizations, identifiable things"),
+        ("Contexts", "contexts", "Situational conditions, environmental factors, boundary conditions")
+    ]
+    
+    for display_name, key, description in basic_categories:
+        entities = extracted_data.get(key, [])
+        count = len(entities) if entities else 0
+        content += f"### [[{display_name}]]\n"
+        content += f"{description}\n\n"
+        if count > 0:
+            content += f"*Recent entries: {count}*\n\n"
+    
+    # Dynamic (Relational) Parts Section
+    content += "## Dynamic (Relational) Parts\n\n"
+    content += "The connections and flows between elements that enable relinking:\n\n"
+    
+    dynamic_categories = [
+        ("Relationships", "relationships", "Connections, associations, or links between entities/concepts"),
+        ("Processes", "processes", "Sequences of actions, transformations, temporal flows"),
+        ("Mechanisms", "mechanisms", "Causal pathways, explanatory logics, functional operations")
+    ]
+    
+    for display_name, key, description in dynamic_categories:
+        entities = extracted_data.get(key, [])
+        count = len(entities) if entities else 0
+        content += f"### [[{display_name}]]\n"
+        content += f"{description}\n\n"
+        if count > 0:
+            content += f"*Recent entries: {count} (with source/target relinks)*\n\n"
+    
+    # Cross-reference summary
+    content += "## Navigation Guide\n\n"
+    content += "- **Start here**: Browse [[Definitions]] and [[Concepts]] to understand key terms\n"
+    content += "- **Explore connections**: Check [[Relationships]], [[Processes]], and [[Mechanisms]] for causal links\n"
+    content += "- **Find concrete examples**: Look at [[Entities]] and [[Facts]] for specific instances\n"
+    content += "- **Understand context**: Review [[Contexts]] for situational factors\n\n"
+    
+    content += "---\n"
+    content += f"*Last updated: {datetime.now().strftime('%Y-%m-%d')}*\n"
+    
+    return content
+
+
 def update_wiki(wiki_dir: Path, extracted_data: dict, date_str: str, source: str) -> bool:
     """
     Update wiki pages with extracted entities.
     
     Args:
         wiki_dir: Wiki directory
-        extracted_data: Dict with definitions, facts, theoretical_frameworks, methodologies, empirical_cases, research arrays
+        extracted_data: Dict with definitions, facts, concepts, entities, relationships, processes, mechanisms, contexts arrays
         date_str: Date string for headings
         source: Source label
         
     Returns:
         True on success, False on failure
     """
-    pages = {
+    # Basic (static) parts - simple list entries
+    basic_pages = {
         "Definitions": extracted_data.get("definitions", []),
         "Facts": extracted_data.get("facts", []),
-        "Theoretical_Frameworks": extracted_data.get("theoretical_frameworks", []),
-        "Methodologies": extracted_data.get("methodologies", []),
-        "Empirical_Cases": extracted_data.get("empirical_cases", []),
-        "Research": extracted_data.get("research", [])
+        "Concepts": extracted_data.get("concepts", []),
+        "Entities": extracted_data.get("entities", []),
+        "Contexts": extracted_data.get("contexts", [])
+    }
+    
+    # Dynamic (relational) parts - entries with source/target relinks
+    dynamic_pages = {
+        "Relationships": extracted_data.get("relationships", []),
+        "Processes": extracted_data.get("processes", []),
+        "Mechanisms": extracted_data.get("mechanisms", [])
     }
     
     updates_needed = False
-    for page_name, entities in pages.items():
+    
+    # Process basic pages
+    for page_name, entities in basic_pages.items():
         if not entities:
             continue
         
@@ -871,6 +1015,33 @@ def update_wiki(wiki_dir: Path, extracted_data: dict, date_str: str, source: str
             write_wiki_page(wiki_dir, page_name, updated)
             updates_needed = True
             log(f"Updated {page_name}.md")
+    
+    # Process dynamic pages with relinking
+    for page_name, entities in dynamic_pages.items():
+        if not entities:
+            continue
+        
+        # Format dynamic entries with relinks
+        formatted_entries = []
+        for entry in entities:
+            formatted = format_dynamic_entry(entry, page_name)
+            formatted_entries.append({"text": formatted})
+        
+        existing = read_wiki_page(wiki_dir, page_name)
+        updated = append_entities_to_page(existing, formatted_entries, date_str, source)
+        
+        if updated != existing:
+            write_wiki_page(wiki_dir, page_name, updated)
+            updates_needed = True
+            log(f"Updated {page_name}.md")
+    
+    # Create/update Home page with index and cross-references
+    home_content = generate_home_page(extracted_data)
+    existing_home = read_wiki_page(wiki_dir, "Home")
+    if home_content != existing_home:
+        write_wiki_page(wiki_dir, "Home", home_content)
+        updates_needed = True
+        log("Updated Home.md with index and cross-references")
     
     return updates_needed
 
