@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'anthropic/claude-3-haiku' }}
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free' }}
       OPENROUTER_PROMPT_TEMPLATE: ${{ vars.OPENROUTER_PROMPT_TEMPLATE || '' }}
     permissions:
       contents: read
