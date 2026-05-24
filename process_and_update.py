@@ -376,8 +376,8 @@ def call_openrouter(text: str) -> tuple[dict | None, bool]:
             return None, True
         
         # Try to parse JSON
-        parsed = parse_json_response(content)
-        if parsed:
+        parsed, success = parse_json_response(content)
+        if success and parsed:
             log(f"Successfully parsed JSON with {len(parsed)} top-level keys: {list(parsed.keys())}")
             return parsed, True
         
@@ -399,46 +399,20 @@ def call_openrouter(text: str) -> tuple[dict | None, bool]:
         return None, True
 
 
-def normalize_json_to_structure(data: dict) -> dict:
+def normalize_json_to_structure(data: dict) -> tuple[dict, bool]:
     """
-    Normalize any JSON object to the required eight-category structure.
+    Normalize any JSON object to a dynamic category structure.
     
-    Uses heuristic key mapping:
-    - definitions, definition, defines, glossary → definitions
-    - facts, fact, findings, observations → facts
-    - concepts, concept, ideas, constructs → concepts
-    - entities, entity, actors, organizations → entities
-    - relationships, relationship, connections, links → relationships
-    - processes, process, sequences, flows → processes
-    - mechanisms, mechanism, causal pathways → mechanisms
-    - contexts, context, conditions, boundaries → contexts
+    Preserves the original category names from the LLM response while
+    normalizing each item to have "text" and optionally "context" keys.
     
     Args:
         data: Any valid JSON dict
         
     Returns:
-        Normalized dict with definitions, facts, concepts, entities, relationships, processes, mechanisms, contexts arrays
+        Tuple of (normalized dict preserving original category names, success boolean)
     """
-    result = {
-        "definitions": [], 
-        "facts": [], 
-        "concepts": [], 
-        "entities": [], 
-        "relationships": [], 
-        "processes": [], 
-        "mechanisms": [], 
-        "contexts": []
-    }
-    
-    # Key category mappings
-    definition_keys = {"definitions", "definition", "defines", "glossary", "terms", "terminology"}
-    fact_keys = {"facts", "fact", "findings", "observations", "data_points", "statements", "information"}
-    concept_keys = {"concepts", "concept", "ideas", "constructs", "theoretical_constructs", "mental_models"}
-    entity_keys = {"entities", "entity", "actors", "organizations", "objects", "things"}
-    relationship_keys = {"relationships", "relationship", "connections", "links", "associations", "relations"}
-    process_keys = {"processes", "process", "sequences", "flows", "transformations", "actions"}
-    mechanism_keys = {"mechanisms", "mechanism", "causal_pathways", "explanatory_logics", "functional_operations"}
-    context_keys = {"contexts", "context", "conditions", "boundaries", "situational_factors", "environmental_factors"}
+    result = {}
     
     def extract_text_from_item(item) -> dict | None:
         """Extract text and context from various item formats."""
@@ -476,61 +450,51 @@ def normalize_json_to_structure(data: dict) -> dict:
             return None
         return None
     
-    def process_array(arr: list, category: str):
-        """Process an array and add items to the appropriate category."""
+    def process_array(arr: list) -> list:
+        """Process an array and return normalized items."""
+        normalized_items = []
         for item in arr:
             extracted = extract_text_from_item(item)
             if extracted:
-                result[category].append(extracted)
-    
-    def categorize_key(key: str) -> str:
-        """Determine which category a key belongs to."""
-        key_lower = key.lower()
-        if key_lower in definition_keys:
-            return "definitions"
-        elif key_lower in fact_keys:
-            return "facts"
-        elif key_lower in concept_keys:
-            return "concepts"
-        elif key_lower in entity_keys:
-            return "entities"
-        elif key_lower in relationship_keys:
-            return "relationships"
-        elif key_lower in process_keys:
-            return "processes"
-        elif key_lower in mechanism_keys:
-            return "mechanisms"
-        elif key_lower in context_keys:
-            return "contexts"
-        else:
-            return "facts"  # Safe default
+                normalized_items.append(extracted)
+        return normalized_items
     
     def process_value(key: str, value, depth: int = 0):
-        """Recursively process a value and categorize it."""
+        """Recursively process a value and add to result."""
         # Prevent infinite recursion
         if depth > 5:
             return
         
         if isinstance(value, list):
-            category = categorize_key(key)
-            process_array(value, category)
+            normalized_items = process_array(value)
+            if normalized_items:
+                # Use the original key name (preserved from LLM response)
+                result[key] = normalized_items
         elif isinstance(value, dict):
             # Check if this dict looks like a data item (has text-like content)
             extracted = extract_text_from_item(value)
             if extracted:
-                category = categorize_key(key)
-                result[category].append(extracted)
+                # Single item under this key - create array with one element
+                if key not in result:
+                    result[key] = []
+                result[key].append(extracted)
             else:
                 # Recurse into nested dicts
                 for nested_key, nested_value in value.items():
                     process_value(nested_key, nested_value, depth + 1)
         elif isinstance(value, str) and value.strip():
-            # Plain string value - add to facts by default
-            result["facts"].append({"text": value.strip()})
+            # Plain string value - create a category named after the key
+            if key not in result:
+                result[key] = []
+            result[key].append({"text": value.strip()})
     
     # Process all top-level keys
     for key, value in data.items():
         process_value(key, value)
+    
+    # If no categories were created, return empty dict with failure
+    if not result:
+        return {}, False
     
     return result, True
 
@@ -936,9 +900,11 @@ def update_wiki(wiki_dir: Path, extracted_data: dict, date_str: str, source: str
     """
     Update wiki pages with extracted entities.
     
+    Dynamically creates wiki pages based on the categories present in the extracted data.
+    
     Args:
         wiki_dir: Wiki directory
-        extracted_data: Dict with definitions, facts, concepts, entities, relationships, processes, mechanisms, contexts arrays
+        extracted_data: Dict with dynamic category names (preserved from LLM response)
         date_str: Date string for headings
         source: Source label
         
@@ -960,6 +926,30 @@ def update_wiki(wiki_dir: Path, extracted_data: dict, date_str: str, source: str
         "Processes": extracted_data.get("processes", []),
         "Mechanisms": extracted_data.get("mechanisms", [])
     }
+    
+    # Also process any additional dynamic categories from the LLM response
+    known_categories = {"definitions", "facts", "concepts", "entities", "contexts", 
+                        "relationships", "processes", "mechanisms"}
+    
+    for category_key, entities in extracted_data.items():
+        if category_key.lower() not in known_categories and entities:
+            # Create a page name from the category key (capitalize each word)
+            page_name = category_key.replace("_", " ").title()
+            # Remove common suffixes that would be redundant in page names
+            for suffix in ["s List", " Items", " Entries"]:
+                page_name = page_name.replace(suffix, "")
+            page_name = page_name.strip()
+            
+            # Add to appropriate collection based on whether items have source/target
+            has_relational_fields = any(
+                isinstance(e, dict) and ("source" in e or "target" in e)
+                for e in entities
+            )
+            
+            if has_relational_fields:
+                dynamic_pages[page_name] = entities
+            else:
+                basic_pages[page_name] = entities
     
     updates_needed = False
     
