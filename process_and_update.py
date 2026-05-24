@@ -330,6 +330,10 @@ Text to analyze:
             "meta-llama/llama-3-8b-instruct"
         ]
     
+    # Note: All modern LLMs can return JSON. The parser handles broken/malformed JSON
+    # using multiple fallback strategies (json → json5 → sanitization), so we always
+    # use json_schema format to get structured output when possible.
+    
     try:
         log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
         response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
@@ -405,6 +409,9 @@ Text to analyze:
         choice = choices[0]
         finish_reason = choice.get("finish_reason", "")
         content = choice.get("message", {}).get("content", "")
+        
+        # Debug: log raw content for debugging (first 500 chars)
+        log(f"Raw API content (first 500 chars): {content[:500] if content else 'EMPTY'}")
         
         # Debug: log if content is empty but choices exist
         if not content and choices:
