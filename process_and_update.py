@@ -205,7 +205,7 @@ def get_input_text() -> tuple[str, str]:
     return "", ""
 
 
-def call_openrouter(text: str) -> dict | None:
+def call_openrouter(text: str) -> tuple[dict | None, bool]:
     """
     Call OpenRouter API to extract entities from text.
     
@@ -213,12 +213,12 @@ def call_openrouter(text: str) -> dict | None:
         text: The input text to process
         
     Returns:
-        Parsed JSON dict or None
+        Tuple of (parsed JSON dict or None, success boolean)
     """
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         log_error("OPENROUTER_API_KEY environment variable not set")
-        return None
+        return None, False
     
     model = os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
     
@@ -378,11 +378,12 @@ def call_openrouter(text: str) -> dict | None:
         # Try to parse JSON
         parsed = parse_json_response(content)
         if parsed:
+            log(f"Successfully parsed JSON with {len(parsed)} top-level keys: {list(parsed.keys())}")
             return parsed, True
         
-        # If parsing failed, the schema might not be supported
+        # If parsing failed, log and return failure
         log_error(f"Failed to parse JSON from response: {content[:200]}...")
-        return None, False  # Signal that json_schema may not be supported
+        return None, False  # Signal that parsing failed
         
     except requests.exceptions.Timeout as e:
         log_error(f"API request timed out: {e}")
@@ -392,6 +393,9 @@ def call_openrouter(text: str) -> dict | None:
         return None, True
     except json.JSONDecodeError as e:
         log_error(f"Failed to parse API response as JSON: {e}")
+        return None, True
+    except Exception as e:
+        log_error(f"Unexpected error in call_openrouter: {e}")
         return None, True
 
 
@@ -528,10 +532,10 @@ def normalize_json_to_structure(data: dict) -> dict:
     for key, value in data.items():
         process_value(key, value)
     
-    return result
+    return result, True
 
 
-def parse_json_response(content: str) -> dict | None:
+def parse_json_response(content: str) -> tuple[dict | None, bool]:
     """
     Parse JSON from API response, handling potential markdown formatting and any structure.
     
@@ -545,7 +549,7 @@ def parse_json_response(content: str) -> dict | None:
         content: Raw response content
         
     Returns:
-        Normalized dict with definitions, facts, research arrays, or None if no JSON found
+        Tuple of (normalized dict or None, success boolean)
     """
     # Remove markdown code blocks if present - use greedy pattern for nested braces
     content = content.strip()
@@ -565,7 +569,7 @@ def parse_json_response(content: str) -> dict | None:
     # Check if we have any JSON-like content
     if not content.startswith('{'):
         log_error(f"No JSON object found in response. Content starts with: {content[:200]}")
-        return None
+        return None, False
     
     # Stage 1: Try strict json.loads() (fast path for well-formed JSON)
     try:
@@ -574,13 +578,13 @@ def parse_json_response(content: str) -> dict | None:
         # Validate it's a dict
         if not isinstance(data, dict):
             log_error(f"Parsed JSON is not an object: {type(data)}")
-            return None
+            return None, False
         
         # Normalize to required structure using heuristic key mapping
-        normalized = normalize_json_to_structure(data)
+        normalized, _ = normalize_json_to_structure(data)
         
         # Return the normalized structure (always has definitions, facts, research keys)
-        return normalized
+        return normalized, True
         
     except json.JSONDecodeError as e:
         # Log the problematic content for debugging (first 200 chars)
@@ -593,12 +597,12 @@ def parse_json_response(content: str) -> dict | None:
         # Validate it's a dict
         if not isinstance(data, dict):
             log_error(f"Parsed JSON5 is not an object: {type(data)}")
-            return None
+            return None, False
         
         # Normalize to required structure
-        normalized = normalize_json_to_structure(data)
+        normalized, _ = normalize_json_to_structure(data)
         log("Stage 2 (json5) succeeded in parsing malformed JSON")
-        return normalized
+        return normalized, True
         
     except Exception as e:
         log_error(f"Stage 2 (json5.loads) failed: {e}")
@@ -613,18 +617,18 @@ def parse_json_response(content: str) -> dict | None:
             # Validate it's a dict
             if not isinstance(data, dict):
                 log_error(f"Sanitized JSON is not an object: {type(data)}")
-                return None
+                return None, False
             
             # Normalize to required structure
-            normalized = normalize_json_to_structure(data)
+            normalized, _ = normalize_json_to_structure(data)
             log("Stage 3 (sanitization) succeeded in fixing JSON")
-            return normalized
+            return normalized, True
     except Exception as e:
         log_error(f"Stage 3 (sanitization) failed: {e}")
     
     # Stage 4: All attempts failed
     log_error("All JSON parsing stages failed")
-    return None
+    return None, False
 
 
 def _sanitize_json_content(content: str) -> str:
@@ -1203,11 +1207,20 @@ def main():
     log(f"Text length: {len(text)} characters")
     
     # Call OpenRouter API with minimal parameters (matches Playground request)
-    extracted = call_openrouter(text)
+    result = call_openrouter(text)
     
-    if not extracted:
+    if not result:
         log_error("Failed to extract entities from text")
         sys.exit(1)
+    
+    # Extract data from tuple (parsed_data, success_flag)
+    if isinstance(result, tuple):
+        extracted, success = result
+        if not success or not extracted:
+            log_error("API call failed or returned no data")
+            sys.exit(1)
+    else:
+        extracted = result
     
     # Validate extracted data
     total_entities = (
