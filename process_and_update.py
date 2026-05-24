@@ -318,13 +318,14 @@ Text to analyze:
     # Add provider routing hints for openrouter/free to ensure JSON-capable model selection
     if model == "openrouter/free":
         payload["provider"] = {
-            "order": ["Anthropic", "Google", "Meta"],
+            "order": ["Nvidia", "Anthropic", "Google", "Meta"],
             "allow_fallbacks": True,
             "require_parameters": False
         }
         # Also add a specific model hint for reliable JSON output
-        # Try claude-3-haiku first as it's free and supports json_schema well
+        # Try nemotron first as user confirmed it supports json_schema
         payload["models"] = [
+            "nvidia/nemotron-3-super-120b-a12b-20230311:free",
             "anthropic/claude-3-haiku",
             "google/gemini-flash-1.5",
             "meta-llama/llama-3-8b-instruct"
