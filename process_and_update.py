@@ -337,7 +337,13 @@ Text to analyze:
     
     try:
         log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
+        log(f"Model: {model}")
+        log(f"Request payload (first 500 chars): {json.dumps(payload)[:500]}...")
         response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
+        
+        # Log raw response for debugging before any error handling
+        log(f"Raw HTTP response status: {response.status_code}")
+        log(f"Raw HTTP response body (first 500 chars): {response.text[:500] if response.text else 'EMPTY'}")
         
         # Check for OpenRouter errors returned inside HTTP 200
         if response.status_code == 200:
