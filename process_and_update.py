@@ -230,17 +230,18 @@ def get_input_text() -> tuple[str, str]:
     if not inbox_path:
         inbox_path = "inbox"
     
+    # First try specific file pattern if provided
     if file_pattern:
-        # Specific file triggered the workflow
         matching_files = list(Path(inbox_path).glob(file_pattern))
         if matching_files:
             txt_file = matching_files[0]
             content = txt_file.read_text(encoding="utf-8").strip()
             source = txt_file.stem  # filename without extension
             if content:
+                log(f"Processing specific file: {txt_file} ({len(content)} chars)")
                 return content, source
     
-    # Look for any .txt files in inbox
+    # Fallback: Look for any .txt files in inbox
     inbox_dir = Path(inbox_path)
     if inbox_dir.exists():
         txt_files = sorted(inbox_dir.glob("*.txt"))
@@ -250,6 +251,7 @@ def get_input_text() -> tuple[str, str]:
             content = txt_file.read_text(encoding="utf-8").strip()
             source = txt_file.stem
             if content:
+                log(f"Processing latest inbox file: {txt_file} ({len(content)} chars)")
                 return content, source
     
     return "", ""
@@ -318,15 +320,16 @@ Text to analyze:
     # Add provider routing hints for openrouter/free to ensure JSON-capable model selection
     if model == "openrouter/free":
         payload["provider"] = {
-            "order": ["Anthropic", "Google", "Meta"],
+            "order": ["Google", "Anthropic", "Meta"],
             "allow_fallbacks": True,
             "require_parameters": False
         }
         # Also add a specific model hint for reliable JSON output
-        # Try claude-3-haiku first as it's free and supports json_schema well
+        # Google's Gemini models are known for reliable JSON output on free tier
         payload["models"] = [
-            "anthropic/claude-3-haiku",
+            "google/gemini-2.0-flash-exp:free",
             "google/gemini-flash-1.5",
+            "anthropic/claude-3-haiku",
             "meta-llama/llama-3-8b-instruct"
         ]
     
@@ -414,6 +417,9 @@ Text to analyze:
             # This often happens when the model doesn't support the response_format parameter
             # Try falling back to json_object format
             return None, False
+        
+        # Log raw content for debugging (first 500 chars)
+        log(f"API response content (first 500 chars): {content[:500] if content else 'EMPTY'}")
         
         # Validate finish_reason is "stop" (not "length")
         if finish_reason == "length":
@@ -1263,6 +1269,11 @@ def main():
     # and returned None, so we should abort rather than retry immediately
     if not extracted:
         log_error("Failed to extract entities from text after maximum 2 attempts")
+        log_error("This is typically caused by:")
+        log_error("  1. OPENROUTER_API_KEY is missing or invalid")
+        log_error("  2. Model specified in OPENROUTER_MODEL is not accessible")
+        log_error("  3. API returned empty response (model couldn't generate JSON)")
+        log_error("Check the debug logs above for the specific error message.")
         sys.exit(1)
     
     # Validate extracted data
