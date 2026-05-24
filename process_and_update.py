@@ -255,22 +255,20 @@ def get_input_text() -> tuple[str, str]:
     return "", ""
 
 
-def call_openrouter(text: str, use_schema: bool = True) -> tuple[dict | None, bool]:
+def call_openrouter(text: str) -> dict | None:
     """
     Call OpenRouter API to extract entities from text.
     
     Args:
         text: The input text to process
-        use_schema: If True, use json_schema response format; if False, use json_object
         
     Returns:
-        Tuple of (parsed JSON dict or None, schema_supported boolean)
-        schema_supported indicates whether the API supports json_schema format
+        Parsed JSON dict or None
     """
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         log_error("OPENROUTER_API_KEY environment variable not set")
-        return None, True
+        return None
     
     model = os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL)
     prompt_template = os.environ.get("OPENROUTER_PROMPT_TEMPLATE", DEFAULT_PROMPT_TEMPLATE)
@@ -293,53 +291,22 @@ Text to analyze:
         "X-Title": "Knowledge Extractor"
     }
     
-    # Build payload with appropriate response format
+    # Build payload - minimal parameters only (model, messages, temperature, max_tokens)
+    # No response_format, no provider routing, no models array
     payload = {
         "model": model,
         "messages": [
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 24000,  # Maximum output tokens to avoid truncation
+        "max_tokens": 24000,
     }
     
-    # Use json_schema if requested, otherwise json_object
-    if use_schema:
-        payload["response_format"] = {
-            "type": "json_schema",
-            "json_schema": build_extraction_json_schema()
-        }
-    else:
-        payload["response_format"] = {"type": "json_object"}
-    
-    # Note: removed "provider": {"require_parameters": true} - overly restrictive on free tier
-    # Note: removed "plugins" - not needed for basic extraction
-    
-    # Add provider routing hints for openrouter/free to ensure JSON-capable model selection
-    if model == "openrouter/free":
-        payload["provider"] = {
-            "order": ["Nvidia", "Anthropic", "Google", "Meta"],
-            "allow_fallbacks": True,
-            "require_parameters": False
-        }
-        # Also add a specific model hint for reliable JSON output
-        # Try nemotron first as user confirmed it supports json_schema
-        payload["models"] = [
-            "nvidia/nemotron-3-super-120b-a12b-20230311:free",
-            "anthropic/claude-3-haiku",
-            "google/gemini-flash-1.5",
-            "meta-llama/llama-3-8b-instruct"
-        ]
-    
-    # Note: All modern LLMs can return JSON. The parser handles broken/malformed JSON
-    # using multiple fallback strategies (json → json5 → sanitization), so we always
-    # use json_schema format to get structured output when possible.
-    
     try:
-        log(f"Calling OpenRouter API with {'json_schema' if use_schema else 'json_object'} format...")
+        log(f"Calling OpenRouter API...")
         log(f"Model: {model}")
-        log(f"Request payload (first 500 chars): {json.dumps(payload)[:500]}...")
-        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60)
+        log(f"Request payload: {json.dumps(payload)}")
+        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=300)
         
         # Log raw response for debugging before any error handling
         log(f"Raw HTTP response status: {response.status_code}")
@@ -1265,18 +1232,11 @@ def main():
     log(f"Processing input from source: {source}")
     log(f"Text length: {len(text)} characters")
     
-    # Attempt 1: Use json_schema for structured output
-    extracted, schema_supported = call_openrouter(text, use_schema=True)
+    # Call OpenRouter API with minimal parameters (matches Playground request)
+    extracted = call_openrouter(text)
     
-    # If first attempt failed and schema may not be supported, try with json_object fallback
-    if not extracted and not schema_supported:
-        log("json_schema may not be supported, retrying with json_object format...")
-        extracted, _ = call_openrouter(text, use_schema=False)
-    
-    # Handle rate limit scenario - if we got a 429, the function already waited
-    # and returned None, so we should abort rather than retry immediately
     if not extracted:
-        log_error("Failed to extract entities from text after maximum 2 attempts")
+        log_error("Failed to extract entities from text")
         sys.exit(1)
     
     # Validate extracted data
