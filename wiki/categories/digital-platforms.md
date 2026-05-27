@@ -1,4 +1,4 @@
-# Category: Digital Platforms as Empirical Stress Tests
+# Digital Platforms as Empirical Stress Tests
 
 ## Overview
 

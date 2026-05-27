@@ -1,4 +1,4 @@
-# Category: New Empirical Foundation
+# New Empirical Foundation
 
 ## Overview
 

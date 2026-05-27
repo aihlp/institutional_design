@@ -1,4 +1,4 @@
-# Category: Classical Institutional Theory
+# Classical Institutional Theory
 
 ## Overview
 
