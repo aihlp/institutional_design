@@ -1,4 +1,4 @@
-# Category: Core Concepts
+# Core Concepts
 
 ## Overview
 
