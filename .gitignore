@@ -1,3 +1,7 @@
-```
-wiki_tmp/
-```
+# Examples
+src/main.py
+README.md
+config.json
+
+# Project specific
+WIKI_AUDIT_REPORT.md
