@@ -1,0 +1,87 @@
+name: Knowledge Extraction to Wiki
+
+on:
+  # Manual dispatch trigger
+  workflow_dispatch:
+    inputs:
+      text:
+        description: "Text to process for knowledge extraction"
+        required: false
+        type: string
+      source:
+        description: "Optional source label (defaults to 'manual')"
+        required: false
+        type: string
+        default: ""
+  
+  # Automatic trigger on .txt file changes in inbox/
+  push:
+    paths:
+      - "inbox/*.txt"
+
+jobs:
+  extract-and-update:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free' }}
+      OPENROUTER_PROMPT_TEMPLATE: ${{ vars.OPENROUTER_PROMPT_TEMPLATE }}
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Determine input source
+        id: input-source
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "trigger=manual" >> $GITHUB_OUTPUT
+            echo "Processing manual dispatch input"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "trigger=file" >> $GITHUB_OUTPUT
+            # Get the modified .txt files from inbox/
+            MODIFIED_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep '^inbox/.*\.txt$' || true)
+            if [ -n "$MODIFIED_FILES" ]; then
+              FIRST_FILE=$(echo "$MODIFIED_FILES" | head -1)
+              FILE_NAME=$(basename "$FIRST_FILE" .txt)
+              echo "file_pattern=${FILE_NAME}.txt" >> $GITHUB_OUTPUT
+              echo "Processing file: $FIRST_FILE"
+            else
+              echo "file_pattern=" >> $GITHUB_OUTPUT
+            fi
+          fi
+      
+      - name: Run knowledge extraction
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          WIKI_PUSH_TOKEN: ${{ secrets.WIKI_PUSH_TOKEN }}
+          GITHUB_SERVER_URL: ${{ github.server-url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          INPUT_TEXT: ${{ github.event.inputs.text || '' }}
+          INPUT_SOURCE: ${{ github.event.inputs.source || '' }}
+          INBOX_PATH: "inbox"
+          FILE_PATTERN: ${{ steps.input-source.outputs.file_pattern || '' }}
+        run: |
+          echo "::group::Debug Info"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "INPUT_TEXT length: ${#INPUT_TEXT}"
+          echo "FILE_PATTERN: $FILE_PATTERN"
+          echo "::endgroup::"
+          python process_and_update.py
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf /tmp/wiki_checkout
