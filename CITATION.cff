@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Institutional Design Lab"
+abstract: "Open computational infrastructure for measuring, modeling, simulating, and forecasting institutional dynamics from behavioral data in AI-mediated systems."
+authors:
+  - family-names: "Institutional Design Lab Contributors"
+    name: "Institutional Design Lab Team"
+repository: "https://github.com/aihlp/institutional_design"
+version: "2.0.0"
+doi: "10.5281/zenodo.TODO"  # Update when DOI is assigned
+date-released: "2025-05-28"
+license: "MIT"
+keywords:
+  - "institutional theory"
+  - "behavioral primitives"
+  - "computational social science"
+  - "institutional dynamics"
+  - "governance simulation"
+  - "behavioral forecasting"
