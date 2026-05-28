@@ -1,37 +1,60 @@
-```markdown
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Environment files
+```
+# Dependencies
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
 .env
 .env.local
-*.env.*
-
-# Dependencies
-.venv/
-venv/
-__pycache__/
+.env.*
+pip-log.txt
+pipenv.lock
+poetry.lock
+.tox/
+.coverage
+.coverage.*
+.cache
 .mypy_cache/
 .pytest_cache/
-node_modules/
+.hypothesis/
 
 # Build artifacts
-dist/
 build/
-target/
+dist/
+*.egg
+*.egg-info/
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# Logs
+*.log
+logs/
+
+# Experimental outputs
+experiments/output/
 
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# System files
+# OS
 .DS_Store
 Thumbs.db
 
-# Coverage reports
+# Coverage
 coverage/
 htmlcov/
-.coverage
+
+# Distribution / packaging
+*.tar.gz
+*.whl
 ```

@@ -1,0 +1,61 @@
+# OpenRouter Configuration for Institutional Analysis
+
+provider:
+  # Primary model for reasoning and structured outputs
+  primary: "anthropic/claude-3-5-sonnet"
+  
+  # Fallback models
+  fallback:
+    - "openai/gpt-4-turbo"
+    - "deepseek/deepseek-chat"
+    - "qwen/qwen-2.5-72b-instruct"
+
+# API Configuration
+api_key: "${OPENROUTER_API_KEY}"  # Set via environment variable
+
+# Generation Parameters
+temperature: 0.3  # Lower for consistent structured outputs
+max_tokens: 4096
+top_p: 0.95
+
+# Request Settings
+timeout: 60  # seconds
+retry_attempts: 3
+retry_delay: 5  # seconds
+
+# Output Format Preferences
+response_format: "json"  # Prefer JSON for programmatic processing
+
+# Use Cases Configuration
+use_cases:
+  cluster_interpretation:
+    model: "anthropic/claude-3-5-sonnet"
+    temperature: 0.2
+    max_tokens: 1024
+    
+  drift_explanation:
+    model: "anthropic/claude-3-5-sonnet"
+    temperature: 0.3
+    max_tokens: 2048
+    
+  ontology_mapping:
+    model: "anthropic/claude-3-5-sonnet"
+    temperature: 0.1
+    max_tokens: 2048
+    
+  anomaly_detection:
+    model: "openai/gpt-4-turbo"
+    temperature: 0.2
+    max_tokens: 1024
+
+# Rate Limiting
+rate_limit:
+  requests_per_minute: 60
+  tokens_per_minute: 100000
+
+# Logging
+logging:
+  enabled: true
+  log_requests: false  # Don't log full requests (privacy)
+  log_responses: true  # Log responses for debugging
+  log_metrics: true
