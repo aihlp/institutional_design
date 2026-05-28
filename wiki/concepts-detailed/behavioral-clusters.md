@@ -99,9 +99,9 @@ This conception provides:
 ## Examples
 
 See detailed case studies:
-- [[Cluster Analysis Example]] - Worked example with real data
-- [[Algorithmic exclusion]] - Harmful cluster formation
-- [[The Paradox]] - Counterintuitive cluster dynamics
+- [[Behavioral Cluster Analysis Example]] - Worked example with real data
+- [[Algorithmic Exclusion]] - Harmful cluster formation
+- [[The Paradox at the Heart of Institutional Theory]] - Counterintuitive cluster dynamics
 
 ## Measurement Considerations
 

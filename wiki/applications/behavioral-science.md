@@ -87,9 +87,9 @@ Bridges gaps between:
 ## Case Studies
 
 See individual entries for detailed applications:
-- [[AB Testing Illusion]] - Limitations of traditional methods
-- [[Measurement Dead End]] - Problems this approach solves
-- [[Cluster Analysis Example]] - Worked example
+- [[A/B Testing Illusion]] - Limitations of traditional methods
+- [[The Measurement Dead End]] - Problems this approach solves
+- [[Behavioral Cluster Analysis Example]] - Worked example
 
 ## Future Directions
 
