@@ -1,2 +1,16 @@
-requests
-json5
+# Core dependencies
+numpy>=1.24.0
+pyyaml>=6.0
+requests>=2.31.0
+
+# Visualization (optional)
+matplotlib>=3.7.0
+
+# For Jupyter notebooks (optional)
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# Development
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
