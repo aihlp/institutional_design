@@ -1,36 +1,37 @@
-```
-# Dependencies
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
+```markdown
 # Logs and temp files
 *.log
 *.tmp
 *.swp
-*.swo
 
-# Environment
+# Environment files
 .env
 .env.local
 *.env.*
+
+# Dependencies
+.venv/
+venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+node_modules/
+
+# Build artifacts
+dist/
+build/
+target/
 
 # Editors
 .vscode/
 .idea/
 
-# OS
+# System files
 .DS_Store
 Thumbs.db
 
-# Coverage
-.coverage
+# Coverage reports
 coverage/
 htmlcov/
-
-# Build artifacts
-dist/
-build/
-*.egg-info/
+.coverage
 ```

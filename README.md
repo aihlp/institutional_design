@@ -1,97 +1,358 @@
-# institutional_design
+# Institutional Design Lab
 
-Automated Knowledge Extraction to GitHub Wiki via GitHub Actions.
+Open computational infrastructure for measuring, modeling, simulating, and forecasting institutional dynamics in AI-mediated systems.
 
-## Overview
+## Mission
 
-This repository implements a GitHub Actions workflow that:
-1. Accepts user-submitted text (manually or via `.txt` files in the `inbox/` folder)
-2. Sends it to an LLM via OpenRouter to extract structured entities
-3. Automatically appends them to the repository's wiki in a well-organized manner
+The Institutional Design Lab provides open research infrastructure for understanding how institutions emerge, evolve, and influence behavior in digital environments. We combine theoretical rigor with computational methods to enable:
 
-## Setup
+- **Measurement** of institutional phenomena in digital platforms
+- **Modeling** of institutional dynamics and behavioral patterns
+- **Simulation** of governance interventions and policy changes
+- **Forecasting** of institutional stability and drift
 
-### Prerequisites
+## Research Vision
 
-1. Enable GitHub Wiki for your repository
-2. Configure the following secrets in **Settings → Secrets and variables → Actions**:
-   - `OPENROUTER_API_KEY` – API key for OpenRouter
-   - `WIKI_PUSH_TOKEN` – GitHub personal access token (classic) with `repo` and `wiki` scopes
+Institutions are not just formal rules—they are stable patterns of behavior sustained by shared expectations and information flows. Digital platforms create new information fields where institutions form at unprecedented speed and scale.
 
-### Creating WIKI_PUSH_TOKEN
+Our research program treats institutions as:
 
-1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Generate new token with scopes:
-   - `repo` (Full control of private repositories)
-   - `write:org` (if using organization repos)
-3. Copy the token and add it as `WIKI_PUSH_TOKEN` secret
+1. **Behavioral clusters** - Stable patterns of action observable in trace data
+2. **Information fields** - Distributions of signals that shape expectations
+3. **Reaction systems** - Networks of responses to deviations
+4. **Dynamic equilibria** - Outcomes of ongoing interactive processes
 
-## Usage
+This perspective enables measurement and prediction impossible under classical institutional theory.
 
-### Method 1: Manual Dispatch
+---
 
-1. Go to **Actions** tab
-2. Select **"Knowledge Extraction to Wiki"** workflow
-3. Click **"Run workflow"**
-4. Fill in:
-   - **Text**: Paste the text you want to process
-   - **Source** (optional): A label for the source (e.g., "Meeting Notes", "Research Paper")
-5. Click **"Run workflow"**
+## Repository Architecture
 
-### Method 2: File-based Input
-
-1. Create a `.txt` file in the `inbox/` folder at the repository root
-2. The filename (without extension) will be used as the source label
-3. Push the file to the repository
-4. The workflow triggers automatically
-
-Example:
-```bash
-echo "Your knowledge content here..." > inbox/research_notes.txt
-git add inbox/research_notes.txt
-git commit -m "Add research notes for processing"
-git push
+```
+institutional_design/
+│
+├── theory/                     # Theoretical foundations & literature
+│   ├── foundations/            # Core theoretical frameworks
+│   ├── institutional-primitives/
+│   ├── information-fields/
+│   ├── behavioral-dynamics/    # Behavioral clusters, trajectories, reactions
+│   ├── operationalization/     # Measurement approaches
+│   ├── institutional-evolution/
+│   ├── governance/
+│   └── literature/             # Classical theory (North, Scott, etc.)
+│
+├── ontology/                   # Machine-readable institutional ontology
+│   ├── definitions/
+│   ├── entities/
+│   ├── relationships/
+│   ├── mechanisms/
+│   ├── processes/
+│   ├── contexts/
+│   ├── signals/
+│   ├── reactions/
+│   ├── institutions/
+│   └── mappings/
+│
+├── wiki/                       # Semantic knowledge graph (preserved)
+│
+├── infrastructure/             # Lab automation & tooling
+│   ├── wiki_tools/
+│   └── automation/
+│
+├── datasets/                   # Dataset registry & schemas
+│   ├── registry/               # Reddit, Wikipedia, GitHub, etc.
+│   ├── loaders/
+│   ├── schemas/
+│   ├── synthetic/
+│   ├── metadata/
+│   └── benchmarks/
+│
+├── simulations/                # Computational simulation framework
+│   ├── agents/
+│   ├── signals/
+│   ├── filters/
+│   ├── reactions/
+│   ├── institutions/
+│   ├── entropy/
+│   ├── transitions/
+│   ├── interventions/
+│   └── visualization/
+│
+├── prototypes/                 # Working prototype systems
+│   ├── cluster_detector/       # Institutional Cluster Detector
+│   ├── entropy_monitor/        # Information Field Entropy Monitor
+│   ├── drift_forecaster/       # Institutional Drift Forecasting Engine
+│   └── intervention_simulator/ # Signal Intervention Simulator
+│
+├── benchmarks/                 # Evaluation benchmarks
+│   ├── institutional_stability.md
+│   ├── drift_prediction.md
+│   ├── intervention_effects.md
+│   └── ...
+│
+├── governance/                 # Ethics & governance framework
+│   ├── ETHICS.md
+│   ├── GOVERNANCE.md
+│   └── CONTRIBUTING.md
+│
+├── notebooks/                  # Analysis & exploration notebooks
+│
+└── visualizations/             # Visualization tools & outputs
 ```
 
-## Output
+---
 
-The workflow extracts knowledge organized into **two fundamental dimensions**: Basic (static) parts and Dynamic (relational) parts.
+## Institutional Ontology
 
-### Basic (Static) Parts - Constituent Elements:
-- **Definitions**: Explanations of terms, concepts, or specialized vocabulary; foundational conceptual primitives
-- **Facts**: Verifiable statements, data points, empirical observations, or established information
-- **Concepts**: Abstract ideas, theoretical constructs, or mental models that organize thinking
-- **Entities**: Concrete objects, actors, organizations, or identifiable things in the domain
-- **Contexts**: Situational conditions, environmental factors, or boundary conditions that shape meaning
+Our ontology chain connects micro-level signals to macro-level institutional dynamics:
 
-### Dynamic (Relational) Parts - Connections and Flows:
-- **Relationships**: Connections, associations, or links between entities/concepts (e.g., "causes", "influences", "part-of")
-- **Processes**: Sequences of actions, transformations, or temporal flows that describe how things change
-- **Mechanisms**: Causal pathways, explanatory logics, or functional operations that produce outcomes
+```
+Signal → Stimulus → Filter → Reaction → Habit → Behavioral Cluster 
+→ Institution → Information Field → Institutional Dynamics 
+→ Intervention → Forecast
+```
 
-These are appended to corresponding wiki pages:
-- `Definitions.md`, `Facts.md`, `Concepts.md`, `Entities.md`, `Contexts.md` (basic parts)
-- `Relationships.md`, `Processes.md`, `Mechanisms.md` (dynamic parts with relinking)
-- `Home.md` (automatically generated index with cross-references)
+### Core Ontological Primitives
 
-Dynamic entries include **relinking** via wiki-style `[[source]] → [[target]]` notation to enable navigation between connected knowledge elements.
+| Primitive | Description | Location |
+|-----------|-------------|----------|
+| `Informational Signal` | Units of information shaping expectations | `ontology/signals/` |
+| `Reaction` | Responses to stimuli and deviations | `ontology/reactions/` |
+| `Behavioral Cluster` | Stable patterns of coordinated action | `theory/behavioral-dynamics/` |
+| `Behavioral Trajectory` | Temporal evolution of individual behavior | `theory/behavioral-dynamics/` |
+| `Institution` | Self-sustaining behavioral equilibrium | `ontology/institutions/` |
+| `Information Field` | Distribution of signals across population | `theory/information-fields/` |
 
-## Files
+See `ontology/` for complete semantic structure.
 
-- `.github/workflows/knowledge.yml` – GitHub Actions workflow definition
-- `process_and_update.py` – Main processing script
-- `requirements.txt` – Python dependencies
-- `inbox/` – Folder for file-based input
+---
 
-## Error Handling
+## Knowledge Graph
 
-- Network/API failures: Retries up to 3 times with exponential backoff
-- Invalid JSON from LLM: Retries once with stricter prompt
-- Wiki push conflicts: Performs git pull --rebase and retries
-- Empty input: Exits gracefully without error
+The repository maintains a semantic knowledge graph connecting:
 
-## Security
+- **Definitions** - Conceptual primitives and terminology
+- **Entities** - Actors, organizations, identifiable objects
+- **Relationships** - Causal and structural connections
+- **Processes** - Temporal sequences and transformations
+- **Mechanisms** - Explanatory pathways producing outcomes
+- **Contexts** - Boundary conditions and situational factors
 
-- Secrets are never exposed in logs
-- API calls use secure environment variables
-- Wiki authentication uses token-based auth
+All knowledge elements include cross-references enabling navigation through the institutional conceptual space.
+
+---
+
+## Datasets
+
+We maintain schemas, loaders, and metadata for institutional research across multiple domains:
+
+| Domain | Applications | Registry |
+|--------|--------------|----------|
+| **Reddit** | Community norms, moderation effects | `datasets/registry/reddit.md` |
+| **Wikipedia** | Governance policies, dispute resolution | `datasets/registry/wikipedia.md` |
+| **GitHub** | Code review norms, contribution governance | `datasets/registry/github.md` |
+| **Gaming** | Rule enforcement, reputation systems | `datasets/registry/gaming.md` |
+| **Mobility** | Infrastructure coordination, policy effects | `datasets/registry/mobility.md` |
+| **Finance** | Regulatory regimes, market institutions | `datasets/registry/finance.md` |
+
+**Data Policy**: We store schemas, metadata, and loaders—not raw proprietary data.
+
+---
+
+## Simulations
+
+Computational simulation framework for institutional dynamics:
+
+### Simulation Domains
+
+1. **Institutional Emergence**
+   - Norm formation and stabilization
+   - Convergence dynamics
+   - Critical mass thresholds
+
+2. **Institutional Drift**
+   - Fragmentation processes
+   - Instability indicators
+   - Transition dynamics
+
+3. **Intervention Systems**
+   - Moderation policy changes
+   - Ranking algorithm modifications
+   - Governance interventions
+
+4. **Information Field Dynamics**
+   - Entropy measurement
+   - Signal propagation
+   - Concentration and polarization
+
+---
+
+## Forecasting Systems
+
+Prototype systems for institutional prediction:
+
+### Prototype 1: Institutional Cluster Detector
+
+Identifies stable behavioral clusters from interaction traces.
+
+**Input**: Behavioral traces, interaction histories  
+**Output**: Cluster assignments, emergence maps
+
+### Prototype 2: Information Field Entropy Monitor
+
+Measures fragmentation, polarization, and instability.
+
+**Metrics**: Shannon entropy, Herfindahl indices, clustering coefficients
+
+### Prototype 3: Institutional Drift Forecasting Engine
+
+Predicts norm shifts, convergence, and fragmentation.
+
+**Horizon**: 7-60 day forecasts  
+**Signals**: Behavioral trajectories, entropy trends
+
+### Prototype 4: Signal Intervention Simulator
+
+Tests interventions before deployment.
+
+**Capabilities**: Counterfactual simulation, effect estimation
+
+---
+
+## Benchmarks
+
+Evaluation frameworks for institutional measurement:
+
+| Benchmark | Objective | Metrics |
+|-----------|-----------|---------|
+| **Institutional Stability** | Measure cluster persistence | Persistence rate, transition rate |
+| **Drift Prediction** | Forecast norm shifts | Precision/Recall, AUC-ROC |
+| **Intervention Effects** | Estimate causal impacts | Effect sizes, heterogeneous effects |
+| **Polarization Detection** | Identify fragmentation | Entropy metrics, cluster distance |
+| **Norm Emergence** | Detect new patterns | Change point detection |
+| **Cluster Persistence** | Track stability over time | Survival analysis |
+
+See `benchmarks/` for detailed specifications.
+
+---
+
+## Governance & Ethics
+
+This laboratory operates under explicit ethical commitments:
+
+### Core Principles
+
+- **Transparency**: Open methods, documented assumptions
+- **Anti-Authoritarianism**: Tools for accountability, not control
+- **Misuse Prevention**: Safeguards against manipulation
+- **Democratic Safeguards**: Support participatory governance
+- **Privacy Protection**: Data minimization, anonymization
+
+### Prohibited Uses
+
+- Manipulative governance design
+- Surveillance enhancement
+- Authoritarian optimization
+- Discriminatory targeting
+
+See `governance/ETHICS.md` for complete framework.
+
+---
+
+## Contribution Workflow
+
+We welcome contributions across multiple dimensions:
+
+### Ways to Contribute
+
+- **Code**: Simulations, loaders, visualization tools
+- **Theory**: Ontology expansions, theoretical refinements
+- **Datasets**: Registry entries, schema documentation
+- **Benchmarks**: Evaluation protocols, metrics
+- **Documentation**: Tutorials, examples, improvements
+
+### Process
+
+1. Fork repository
+2. Create branch (`feature/your-feature`)
+3. Make changes following guidelines
+4. Submit Pull Request with description
+5. Review and merge
+
+See `governance/CONTRIBUTING.md` for detailed guidelines.
+
+---
+
+## Research Roadmap
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **Phase 1** | Non-destructive restructuring | ✓ Complete |
+| **Phase 2** | Theory + ontology stabilization | In Progress |
+| **Phase 3** | Dataset architecture | In Progress |
+| **Phase 4** | Simulation framework | Planned |
+| **Phase 5** | Prototype systems | Planned |
+| **Phase 6** | Benchmarks | In Progress |
+| **Phase 7** | Knowledge graph integration | Planned |
+
+---
+
+## Getting Started
+
+### Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/your-org/institutional_design.git
+cd institutional_design
+
+# Explore theory
+ls theory/behavioral-dynamics/
+
+# View ontology
+cat ontology/definitions/definitions.md
+
+# Check dataset schemas
+cat datasets/registry/reddit.md
+
+# Review benchmarks
+cat benchmarks/institutional_stability.md
+```
+
+### For Researchers
+
+1. Start with `theory/` for conceptual foundations
+2. Explore `ontology/` for semantic structure
+3. Review `datasets/registry/` for available data sources
+4. Check `benchmarks/` for evaluation approaches
+
+### For Developers
+
+1. Explore `infrastructure/` for existing tooling
+2. Review `simulations/` for computational framework
+3. Check `prototypes/` for working systems
+4. See `governance/CONTRIBUTING.md` for contribution guidelines
+
+---
+
+## Citation
+
+If you use this research infrastructure, please cite:
+
+```
+@software{institutional_design_lab,
+  title = {Institutional Design Lab},
+  year = {2024},
+  url = {https://github.com/your-org/institutional_design}
+}
+```
+
+---
+
+## License
+
+[Add your license here]
+
+---
+
+*Institutional Design Lab - Open computational infrastructure for institutional science*
