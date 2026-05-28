@@ -27,7 +27,7 @@ This page provides a comprehensive bibliography of scholars and works referenced
 
 **Anatol Rapoport**
 - Rapoport, A. (1960s). Work on subjectivism and behavioral analysis.
-- See [[Rapoport-Subjectivism]] for detailed discussion.
+- See [[Rapoport's Subjectivism]] for detailed discussion.
 
 ## Contemporary Applications
 

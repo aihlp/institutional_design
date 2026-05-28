@@ -109,15 +109,15 @@ Move beyond traditional segmentation to:
 
 - [[Behavioral Science Applications]] - Research foundations
 - [[Technology Company Accountability]] - Ethical considerations
-- [[AB Testing Illusion]] - Limitations of traditional approaches
+- [[A/B Testing Illusion]] - Limitations of traditional approaches
 - [[Behavioral clusters]] - Core concept
 
 ## Case Examples
 
 See detailed entries for:
-- [[Platform Architect]] - Building cluster-aware systems
-- [[The Paradox]] - Counterintuitive findings explained
-- [[Cluster Analysis Example]] - Worked example
+- [[Platform-as-Architect Problem]] - Building cluster-aware systems
+- [[The Paradox at the Heart of Institutional Theory]] - Counterintuitive findings explained
+- [[Behavioral Cluster Analysis Example]] - Worked example
 
 ## Tools and Techniques
 

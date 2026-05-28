@@ -134,9 +134,9 @@ Moves policy beyond:
 ## Case Studies
 
 See detailed entries for:
-- [[Algorithmic exclusion]] - Discrimination case study
-- [[AB Testing Illusion]] - Policy evaluation limitations
-- [[Platform Architect]] - System design implications
+- [[Algorithmic Exclusion]] - Discrimination case study
+- [[A/B Testing Illusion]] - Policy evaluation limitations
+- [[Platform-as-Architect Problem]] - System design implications
 
 ## International Perspectives
 

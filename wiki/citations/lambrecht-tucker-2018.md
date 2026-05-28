@@ -51,7 +51,7 @@ The study exemplifies how digital platforms expose limitations of classical inst
 
 ## Related Concepts
 
-- [[Algorithmic exclusion]] - Core mechanism identified
+- [[Algorithmic Exclusion]] - Core mechanism identified
 - [[Digital Platforms as Empirical Stress Tests]] - Broader theoretical context
 - [[Behavioral clusters]] - Pattern type demonstrated
 - [[Informational signals]] - Platform mediation mechanism

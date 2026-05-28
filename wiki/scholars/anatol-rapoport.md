@@ -38,6 +38,6 @@ The behavioral cluster framework draws on Rapoport's insights to:
 
 ## See Also
 
-- [[Rapoport-Subjectivism]] - Detailed discussion of his contributions
+- [[Rapoport's Subjectivism]] - Detailed discussion of his contributions
 - [[Behavioral clusters]] - Core concept influenced by Rapoport
 - [[New Empirical Foundation]] - Framework incorporating his insights

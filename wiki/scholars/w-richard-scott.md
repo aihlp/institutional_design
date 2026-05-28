@@ -41,5 +41,5 @@ The behavioral cluster framework suggests:
 ## See Also
 
 - [[Classical Institutional Theory]]
-- [[Scott-Pillars]] - Detailed entry on the three pillars
+- [[Scott's Three Pillars]] - Detailed entry on the three pillars
 - [[New Empirical Foundation]]

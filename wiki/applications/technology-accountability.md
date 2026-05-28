@@ -162,7 +162,7 @@ The framework provides:
 
 - [[Regulatory and Policy Applications]] - Government oversight
 - [[Product Management Applications]] - Industry practice
-- [[Algorithmic exclusion]] - Specific harm type
+- [[Algorithmic Exclusion]] - Specific harm type
 - [[Digital Platforms as Empirical Stress Tests]] - Context
 
 ## Legal Frameworks
