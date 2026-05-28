@@ -1,36 +1,44 @@
-```markdown
-# Logs and temp files
+```gitignore
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Logs and temporary files
 *.log
 *.tmp
-*.swp
 
-# Environment
+# Environment files
 .env
 .env.local
-.env.*
+*.env.*
 
-# Dependencies
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Coverage reports
-.coverage
-htmlcov/
-coverage/
-
-# IDE
+# Editors
 .vscode/
 .idea/
 
-# OS
+# Coverage reports
+.coverage
+coverage/
+htmlcov/
+
+# Python cache
+.mypy_cache/
+.pytest_cache/
+
+# Build/dist directories
+dist/
+build/
+target/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node modules (if any)
+node_modules/
+
+# OS specific
 .DS_Store
 Thumbs.db
-```
-
-Wait, let me reconsider - looking at the file changes, they are all markdown files, Python files, and regular source content. No build artifacts, dependencies, or temporary files are present in the changes.
-
-```markdown
-
 ```
