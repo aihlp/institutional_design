@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Behavioral Institutionalism of the Agent-to-Agent (A2A) Economy: The A2A Institutional Dynamics Standard (A2A-IDS)">
+  <meta name="keywords" content="A2A protocol, Model Context Protocol, MCP, Multi-Agent Systems, Institutional Economics, Anomie, Total Variation Distance, Markov Chains">
+  <meta name="author" content="Dr. V. Dyachkov">
+  <title>Behavioral Institutionalism of the Agent-to-Agent (A2A) Economy | A2A-IDS</title>
+  
+  <!-- MathJax for high-fidelity LaTeX math rendering -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-serif: "Charter", "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-subtle: #eff6ff;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      
+      --badge-green-bg: #ecfdf5;
+      --badge-green-txt: #065f46;
+      --badge-blue-bg: #eff6ff;
+      --badge-blue-txt: #1e40af;
+      --badge-amber-bg: #fffbeb;
+      --badge-amber-txt: #92400e;
+      --badge-red-bg: #fef2f2;
+      --badge-red-txt: #991b1b;
+      
+      --callout-bg: #f8fafc;
+      --callout-border: #3b82f6;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --bg-tertiary: #1f2937;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #60a5fa;
+      --accent-subtle: #1e293b;
+      --border: #334155;
+      --border-dark: #475569;
+      
+      --badge-green-bg: #064e3b;
+      --badge-green-txt: #a7f3d0;
+      --badge-blue-bg: #1e3a8a;
+      --badge-blue-txt: #bfdbfe;
+      --badge-amber-bg: #78350f;
+      --badge-amber-txt: #fde68a;
+      --badge-red-bg: #7f1d1d;
+      --badge-red-txt: #fecaca;
+      
+      --callout-bg: #1e293b;
+      --callout-border: #60a5fa;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-serif);
+      font-size: 1.125rem;
+      line-height: 1.78;
+      color: var(--text-primary);
+      background-color: var(--bg-primary);
+      transition: background-color 0.2s ease, color 0.2s ease;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Utility Bar */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      background-color: rgba(255, 255, 255, 0.88);
+    }
+    [data-theme="dark"] .top-nav {
+      background-color: rgba(11, 15, 25, 0.88);
+    }
+    .top-nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.6rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+    }
+    .brand-title {
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .nav-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .theme-toggle-btn {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .theme-toggle-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Main Container with Sticky TOC */
+    .page-wrapper {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 3rem;
+    }
+
+    @media (max-width: 1024px) {
+      .page-wrapper {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+      .toc-sidebar {
+        display: none;
+      }
+    }
+
+    /* TOC Sidebar */
+    .toc-sidebar {
+      position: sticky;
+      top: 4.5rem;
+      height: calc(100vh - 6rem);
+      overflow-y: auto;
+      padding-right: 1rem;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+    }
+    .toc-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+    .toc-list {
+      list-style: none;
+    }
+    .toc-item {
+      margin-bottom: 0.45rem;
+    }
+    .toc-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      display: block;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      line-height: 1.35;
+      transition: all 0.15s ease;
+    }
+    .toc-link:hover {
+      color: var(--accent);
+      background-color: var(--accent-subtle);
+    }
+    .toc-sublist {
+      list-style: none;
+      padding-left: 0.9rem;
+      margin-top: 0.25rem;
+      border-left: 1px solid var(--border);
+    }
+
+    /* Main Content Article */
+    .article-container {
+      max-width: 860px;
+    }
+
+    header.article-header {
+      margin-bottom: 3rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 2.5rem;
+    }
+    .paper-series-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      background: var(--accent-subtle);
+      color: var(--accent);
+      padding: 0.25rem 0.65rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+    h1.article-title {
+      font-family: var(--font-sans);
+      font-size: 2.45rem;
+      font-weight: 800;
+      line-height: 1.22;
+      color: var(--text-primary);
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+    .article-meta {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .meta-item strong {
+      color: var(--text-primary);
+    }
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .badge-blue { background: var(--badge-blue-bg); color: var(--badge-blue-txt); border: 1px solid rgba(37,99,235,0.2); }
+    .badge-green { background: var(--badge-green-bg); color: var(--badge-green-txt); border: 1px solid rgba(5,150,105,0.2); }
+    .badge-amber { background: var(--badge-amber-bg); color: var(--badge-amber-txt); border: 1px solid rgba(217,119,6,0.2); }
+
+    /* Executive Abstract Box */
+    .abstract-box {
+      background: var(--bg-secondary);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 2.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .abstract-label {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+    .abstract-box p {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+    .keywords {
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Headings */
+    h2 {
+      font-family: var(--font-sans);
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text-primary);
+      margin-top: 3.25rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-family: var(--font-sans);
+      font-size: 1.3rem;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--text-primary);
+      margin-top: 2.25rem;
+      margin-bottom: 0.85rem;
+    }
+    h4 {
+      font-family: var(--font-sans);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Content Typography */
+    p {
+      margin-bottom: 1.45rem;
+      text-align: justify;
+      text-justify: inter-word;
+    }
+    ul, ol {
+      margin-bottom: 1.5rem;
+      padding-left: 1.8rem;
+    }
+    li {
+      margin-bottom: 0.55rem;
+    }
+    strong {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Technical Callout Boxes */
+    .callout {
+      background: var(--callout-bg);
+      border-left: 4px solid var(--callout-border);
+      border-radius: 0 8px 8px 0;
+      padding: 1.25rem 1.5rem;
+      margin: 1.8rem 0;
+      font-family: var(--font-sans);
+      font-size: 0.98rem;
+      line-height: 1.6;
+    }
+    .callout-title {
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .callout-warning {
+      border-left-color: #f59e0b;
+      background: var(--badge-amber-bg);
+      color: var(--badge-amber-txt);
+    }
+    .callout-warning .callout-title {
+      color: var(--badge-amber-txt);
+    }
+
+    /* Data Tables */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 2rem 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow-sm);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      text-align: left;
+    }
+    th {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-weight: 700;
+      padding: 0.85rem 1rem;
+      border-bottom: 2px solid var(--border-dark);
+      white-space: nowrap;
+    }
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:nth-child(even) {
+      background-color: var(--bg-secondary);
+    }
+
+    /* Code Blocks & Protocol Snippets */
+    pre {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+      color: var(--text-primary);
+    }
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.875em;
+      background: var(--bg-tertiary);
+      padding: 0.15em 0.35em;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* Math Displays */
+    .math-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      margin: 1.5rem 0;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    /* Hypothesis Box */
+    .hypothesis-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1rem;
+      transition: border-color 0.15s ease;
+    }
+    .hypothesis-card:hover {
+      border-color: var(--accent);
+    }
+    .hypo-header {
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--accent);
+      margin-bottom: 0.3rem;
+    }
+    .hypo-text {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+      text-align: left;
+    }
+
+    /* References */
+    .references-list {
+      list-style: none;
+      padding-left: 0;
+      font-family: var(--font-sans);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .references-list li {
+      margin-bottom: 1rem;
+      padding-left: 2rem;
+      text-indent: -2rem;
+    }
+    .references-list a {
+      color: var(--accent);
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .references-list a:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.article-footer {
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    @media print {
+      body {
+        font-size: 10.5pt;
+        line-height: 1.5;
+        background: #fff;
+        color: #000;
+      }
+      .top-nav, .toc-sidebar, .theme-toggle-btn {
+        display: none !important;
+      }
+      .page-wrapper {
+        display: block;
+        max-width: 100%;
+        padding: 0;
+      }
+      .article-container {
+        max-width: 100%;
+      }
+      a {
+        color: #000;
+        text-decoration: underline;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Utility Header -->
+  <nav class="top-nav">
+    <div class="top-nav-inner">
+      <a href="#title" class="brand-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+          <path d="M2 12h20"></path>
+        </svg>
+        <span>A2A Institutional Dynamics Standard (A2A-IDS)</span>
+      </a>
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeBtn">🌓 Dark Mode</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <!-- Sticky Table of Contents Sidebar -->
+    <aside class="toc-sidebar">
+      <div class="toc-title">Article Outline</div>
+      <ul class="toc-list">
+        <li class="toc-item">
+          <a href="#sec-1" class="toc-link">1. Introduction</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-1-1" class="toc-link">1.1. Problem Statement</a></li>
+            <li><a href="#sec-1-2" class="toc-link">1.2. Conceptual Apparatus</a></li>
+            <li><a href="#sec-1-3" class="toc-link">1.3. Formal Hypotheses</a></li>
+            <li><a href="#sec-1-4" class="toc-link">1.4. Methodology</a></li>
+            <li><a href="#sec-1-5" class="toc-link">1.5. Aim and Objectives</a></li>
+            <li><a href="#sec-1-6" class="toc-link">1.6. Object and Subject</a></li>
+            <li><a href="#sec-1-7" class="toc-link">1.7. Practical Applicability</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-2" class="toc-link">2. Seven Behavioral Primitives</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-2-1" class="toc-link">2.1. Informational Signal (S)</a></li>
+            <li><a href="#sec-2-2" class="toc-link">2.2. Algorithmic Perception Filter (F)</a></li>
+            <li><a href="#sec-2-3" class="toc-link">2.3. Stimulus (&sigma;)</a></li>
+            <li><a href="#sec-2-4" class="toc-link">2.4. Reaction (R)</a></li>
+            <li><a href="#sec-2-5" class="toc-link">2.5. Behavioral Pattern (&Pi;)</a></li>
+            <li><a href="#sec-2-6" class="toc-link">2.6. Stationarity (&Sigma;)</a></li>
+            <li><a href="#sec-2-7" class="toc-link">2.7. Behavioral Spectrum (K_spec)</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-3" class="toc-link">3. Hub as Informational Field</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-3-1" class="toc-link">3.1. Signal Density (D_hub)</a></li>
+            <li><a href="#sec-3-2" class="toc-link">3.2. Propagation Speed (V_prop)</a></li>
+            <li><a href="#sec-3-3" class="toc-link">3.3. Access Asymmetry (A_access)</a></li>
+            <li><a href="#sec-3-4" class="toc-link">3.4. Informational Field Entropy (H_hub)</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-4" class="toc-link">4. Four Institutional Regimes</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-4-1" class="toc-link">4.1. Regime H2H</a></li>
+            <li><a href="#sec-4-2" class="toc-link">4.2. Regime H2A</a></li>
+            <li><a href="#sec-4-3" class="toc-link">4.3. Regime A2H</a></li>
+            <li><a href="#sec-4-4" class="toc-link">4.4. Regime A2A</a></li>
+            <li><a href="#sec-4-5" class="toc-link">4.5. Tripartite Coexistence</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-5" class="toc-link">5. A2A Anomie & Metric Gap</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-5-1" class="toc-link">5.1. Definition & Layer Model</a></li>
+            <li><a href="#sec-5-2" class="toc-link">5.2. Mathematical Formalization</a></li>
+            <li><a href="#sec-5-3" class="toc-link">5.3. Typology of Hub Anomies</a></li>
+            <li><a href="#sec-5-4" class="toc-link">5.4. Diagnostic Thresholds</a></li>
+            <li><a href="#sec-5-5" class="toc-link">5.5. Worked Protocol Example</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-6" class="toc-link">6. Measurement Protocol</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-6-1" class="toc-link">6.1. Sliding Windows</a></li>
+            <li><a href="#sec-6-2" class="toc-link">6.2. TVD Quantification</a></li>
+            <li><a href="#sec-6-3" class="toc-link">6.3. ADF & KPSS Testing</a></li>
+            <li><a href="#sec-6-4" class="toc-link">6.4. Markov Spectral Analysis</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-7" class="toc-link">7. Measurable Institutional Gaps</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-7-1" class="toc-link">7.1. Economic Vacuum</a></li>
+            <li><a href="#sec-7-2" class="toc-link">7.2. Opaque Execution Gap</a></li>
+            <li><a href="#sec-7-3" class="toc-link">7.3. HITL Safety Guarantees</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-8" class="toc-link">8. Architecture & Telemetry</a>
+          <ul class="toc-sublist">
+            <li><a href="#sec-8-1" class="toc-link">8.1. Five Functional Layers</a></li>
+            <li><a href="#sec-8-2" class="toc-link">8.2. Five Novel Metrics</a></li>
+          </ul>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-9" class="toc-link">9. Conclusions & Synthesis</a>
+        </li>
+        <li class="toc-item">
+          <a href="#sec-refs" class="toc-link">References</a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Article Content -->
+    <main class="article-container">
+      <header class="article-header" id="title">
+        <div class="paper-series-badge">Research Monograph &middot; Digital Institutional Economics</div>
+        <h1 class="article-title">Behavioral Institutionalism of the Agent-to-Agent (A2A) Economy: The A2A Institutional Dynamics Standard (A2A-IDS)</h1>
+        
+        <div class="article-meta">
+          <div class="meta-item"><strong>Author:</strong> Dr. V. Dyachkov</div>
+          <div class="meta-item"><strong>Affiliation:</strong> Computational Institutional Economics &amp; Multi-Agent Systems Laboratory</div>
+          <div class="meta-item"><strong>Status:</strong> Protocol-Verified Specification</div>
+        </div>
+
+        <div class="badge-bar">
+          <span class="badge badge-blue">A2A Specification v1.0.1 Conforming</span>
+          <span class="badge badge-green">Model Context Protocol (MCP) Integrated</span>
+          <span class="badge badge-amber">IETF RFC 8785 (JCS) &amp; RFC 7515 (JWS) Verified</span>
+          <span class="badge badge-blue">x402 Micropayment Protocol Aligned</span>
+        </div>
+      </header>
+
+      <!-- Executive Abstract -->
+      <div class="abstract-box">
+        <div class="abstract-label">Executive Abstract</div>
+        <p>
+          The emerging Agent-to-Agent (A2A) protocol specification establishes syntactic interoperability across heterogeneous software agents via standardized discovery manifests (<code>/.well-known/agent-card.json</code>), JSON-RPC 2.0 message framing (<code>message/send</code>, <code>message/stream</code>), and a deterministic Task lifecycle. Concurrently, the Model Context Protocol (MCP) standardizes execution filters via client-server tool, prompt, and resource binding. However, syntactic conformance to these grammars provides no guarantee of institutional stability, service-level compliance, or multi-agent equilibrium. 
+        </p>
+        <p>
+          This paper formulates the <strong>A2A Institutional Dynamics Standard (A2A-IDS)</strong>, operationalizing behavioral-institutional economics through seven protocol primitives, four informational field parameters, and a computable metric of <em>Institutional Anomie</em> ($A_{\text{hub}}$) defined as the Total Variation Distance between declared AgentCard capabilities and empirical log-derived execution clusters. We validate econometric stationarity testing (ADF/KPSS) and Markov-chain spectral gap analysis ($\tau_{\text{rel}} = \frac{1}{1 - |\lambda_2|}$) to detect latent pathologies—including Capability Cloaking, Cycle Overflow, and Task Flooding—before catastrophic cascading failures occur.
+        </p>
+        <div class="keywords">
+          <strong>Keywords:</strong> Agent-to-Agent (A2A) Protocol, Model Context Protocol (MCP), Institutional Anomie, Total Variation Distance, Requisite Variety, Markov Spectral Gap, Algorithmic Governance.
+        </div>
+      </div>
+
+      <!-- SECTION 1 -->
+      <section id="sec-1">
+        <h2>1. Introduction</h2>
+
+        <h3 id="sec-1-1">1.1. Relevance and Problem Statement</h3>
+        <p>
+          The Agent-to-Agent (A2A) protocol specification (Google, 2025; Linux Foundation, 2025) establishes syntactic interoperability among heterogeneous software agents through standardized discovery manifests (<code>/.well-known/agent-card.json</code>), JSON-RPC 2.0 transport methods (<code>message/send</code>, <code>message/stream</code>), and a deterministic Task lifecycle (<code class="badge badge-blue">SUBMITTED</code> &rarr; <code class="badge badge-blue">WORKING</code> &rarr; <code class="badge badge-green">COMPLETED</code> / <code class="badge badge-amber">INPUT_REQUIRED</code> / <code class="badge badge-red">FAILED</code> / <code class="badge badge-red">CANCELED</code>). However, this syntactic layer provides no instrument for assessing the evolutionary resilience of multi-agent environments. Three structural deficiencies motivate the present study.
+        </p>
+        <p>
+          <strong>First</strong>, the specification treats agents as opaque execution units. A routing hub or client agent can inspect declared interface signatures but cannot audit internal neural weights, system prompts, or routing heuristics. Consequently, conformance to protocol grammar does not entail conformance to declared service-level agreements (SLAs), generating an unmeasured gap between normative declarations and executed behavior.
+        </p>
+        <p>
+          <strong>Second</strong>, without a telemetry-based measurement apparatus, A2A hubs accumulate latent anomalies—<em>capability cloaking</em> (inflated <code>AgentSkill</code> declarations in the AgentCard), <em>cyclic task delegation</em> (Cycle Overflow across unmonitored agent chains), and <em>parasitic state retention</em> (Task Flooding via persistent <code>INPUT_REQUIRED</code> loops)—that degrade orchestration throughput below detectable thresholds until cascading orchestration failure occurs.
+        </p>
+        <p>
+          <strong>Third</strong>, the Model Context Protocol (MCP; Anthropic, 2024) and emerging micropayment standards (HTTP 402 / x402) introduce additional execution surfaces whose institutional stability remains unquantified in literature on multi-agent systems (MAS), distributed AI governance, and digital institutional economics.
+        </p>
+        <p>
+          These deficiencies position the A2A hub not merely as a message router, but as an institutional environment whose health requires continuous, mathematically grounded diagnostics.
+        </p>
+
+        <h3 id="sec-1-2">1.2. Conceptual&ndash;Categorical Apparatus</h3>
+        <p>
+          The theoretical vocabulary of this study is operationalized against observable A2A and MCP telemetry rather than unobservable internal mental states:
+        </p>
+        <ul>
+          <li><strong>(1) Informational Signal ($S$):</strong> Any objectively logged event in the hub carrying source identifier, carrier protocol, formal encoding type, and UTC timestamp. In the A2A stack, signals manifest as AgentCard publications, <code>message/send</code> JSON-RPC envelopes, Task state transitions, and <code>x402</code> payment authorization headers.</li>
+          <li><strong>(2) Algorithmic Perception Filter ($F$):</strong> The deterministic or stochastic configuration of a receiving agent that decodes $S$ into an internal context: system instructions, context-window limits, attached MCP tools (enumerated via <code>tools/list</code>), token budget, authentication profiles (<code>securitySchemes</code>), and foundational model parameters.</li>
+          <li><strong>(3) Stimulus ($\sigma$):</strong> The structured token context assembled in prompt memory after $S$ passes through $F$, defined as $\sigma = F(S)$. $\sigma$ contains no anthropomorphic affective component.</li>
+          <li><strong>(4) Reaction ($R$):</strong> An atomic, individually logged action or inaction: a Task state transition, emission of a content part (<code>TextPart</code>, <code>DataPart</code>, <code>FilePart</code>), invocation of an external MCP tool via <code>tools/call</code>, an <code>x402</code> micropayment transaction, or connection timeout.</li>
+          <li><strong>(5) Behavioral Pattern ($\Pi$):</strong> A reproducible, autocorrelated sequence of reactions exhibited by an agent or cohort under recurrent signal classes ($r > 0.7$ at lag 1, verified via Ljung-Box test, $p < 0.01$).</li>
+          <li><strong>(6) Stationarity ($\Sigma$):</strong> The statistical property that the distribution of reactions preserves its first two moments over successive observation windows $W_t$, confirmed by Augmented Dickey&ndash;Fuller (ADF) and KPSS tests under the condition $\mathrm{TVD}(P_t, P_{t+1}) < 0.05$.</li>
+          <li><strong>(7) Behavioral Spectrum ($K_{\text{spec}}$):</strong> The cardinality of distinct, viable behavioral clusters ($K \ge 3$) emerging in an agent population for a given task class, operationalizing Ashby&rsquo;s (1956) Law of Requisite Variety.</li>
+          <li><strong>(8) Institutional Anomie ($A_{\text{hub}}$):</strong> The Total Variation Distance between the normative distribution $Y$ (declared in AgentCards and SLAs) and the empirical behavioral distribution $X$ (extracted from logs via unsupervised clustering):
+            $$A_{\text{hub}} = \mathrm{TVD}(Y, X) = \frac{1}{2}\sum_{i=1}^{K} |y_i - x_i|$$
+          </li>
+          <li><strong>(9) Agent-as-Proxy:</strong> Every agent is an algorithmic executor of a human or organizational principal. The filter encodes the principal&rsquo;s constraints, budget limits, and risk policies.</li>
+          <li><strong>(10) Informational Field Parameters:</strong> Four physically measurable quantities: signal density $D_{\text{hub}}$, propagation speed $V_{\text{prop}}$, access asymmetry $A_{\text{access}}$ (Gini coefficient over message throughput), and Shannon entropy $H_{\text{hub}}$.</li>
+        </ul>
+
+        <h3 id="sec-1-3">1.3. Formal Hypotheses</h3>
+        <div class="hypothesis-card">
+          <div class="hypo-header">Hypothesis 1 (Anomie&ndash;Fragility Linkage)</div>
+          <p class="hypo-text">If $A_{\text{hub}} > 0.30$ is sustained over three consecutive observation windows, the empirical probability of a cascading orchestration failure within the subsequent window exceeds $0.70$, controlling for task volume.</p>
+        </div>
+        <div class="hypothesis-card">
+          <div class="hypo-header">Hypothesis 2 (Spectral Compression under Asymmetry)</div>
+          <p class="hypo-text">An increase in access asymmetry ($\mathrm{Gini}_{\text{msg}} \to 1$) produces a statistically significant reduction in $K_{\text{spec}}$ (monoculture collapse), verified by negative rank correlation ($\rho < -0.60$, $p < 0.01$).</p>
+        </div>
+        <div class="hypothesis-card">
+          <div class="hypo-header">Hypothesis 3 (Markov Convergence Criterion)</div>
+          <p class="hypo-text">The hub reaches a stationary institutional equilibrium if and only if the second-largest eigenvalue modulus of the $K \times K$ Markov transition matrix satisfies $|\lambda_2| < 0.85$, yielding a finite relaxation time $\tau_{\text{rel}} = \frac{1}{1 - |\lambda_2|}$.</p>
+        </div>
+        <div class="hypothesis-card">
+          <div class="hypo-header">Hypothesis 4 (Autonomization Persistence)</div>
+          <p class="hypo-text">Once a behavioral pattern achieves an autonomization score $K_{\text{aut}} > 0.80$, removal or modification of the originating hub signal does not dissolve the pattern within two subsequent observation windows, demonstrating institutional inertia.</p>
+        </div>
+
+        <h3 id="sec-1-4">1.4. Methodology</h3>
+        <p>
+          The study adopts a mixed-methods design combining formal econometric time-series modeling with empirical protocol trace analysis:
+        </p>
+        <ul>
+          <li><strong>(a) Unsupervised behavioral clustering:</strong> HDBSCAN (Campello et al., 2013) and Gaussian Mixture Models (GMM) extract $K$ natural reaction clusters from task trajectory feature vectors (state sequences, p50/p95/p99 latency, token consumption, error codes).</li>
+          <li><strong>(b) Distributional divergence:</strong> Total Variation Distance (TVD) and Jensen&ndash;Shannon Divergence (JSD) quantify deviation between normative declarations ($Y$) and empirical executions ($X$).</li>
+          <li><strong>(c) Stationarity verification:</strong> Dual testing via Augmented Dickey&ndash;Fuller (rejecting unit-root null at $\alpha=0.05$) and KPSS (failing to reject stationary null) certifies stable digital institutions.</li>
+          <li><strong>(d) Markov spectral analysis:</strong> The empirical transition probability matrix $P = [p_{ij}]$ is evaluated for diagonal dominance ($p_{ii} > 0.85$) and spectral gap ($1 - |\lambda_2|$).</li>
+          <li><strong>(e) Controlled perturbation experiments ($A/B$):</strong> Hub configurations (system prompts, tool definitions) are modified to quantify $K_{\text{aut}}$ and filter feedback rates ($\Phi_{\text{feed}}$).</li>
+          <li><strong>(f) Field parameterization:</strong> Continuous extraction of $D_{\text{hub}}$, $V_{\text{prop}}$, $A_{\text{access}}$, and $H_{\text{hub}}$ from JSON-RPC and SSE streams.</li>
+        </ul>
+
+        <h3 id="sec-1-5">1.5. Aim and Objectives</h3>
+        <p>
+          <strong>Aim:</strong> To formulate and validate an institutional-dynamics governance standard for A2A hubs (the <em>A2A Institutional Dynamics Standard</em>, A2A-IDS) integrating behavioral-institutional theory with the A2A v1.0.1 and MCP protocol stacks.
+        </p>
+        <p><strong>Objectives:</strong></p>
+        <ol>
+          <li>Map the seven behavioral primitives onto concrete A2A and MCP data structures.</li>
+          <li>Calibrate the $A_{\text{hub}}$ anomie metric and establish operational warning thresholds.</li>
+          <li>Formalize the four-regime interaction matrix ($\text{H2H}, \text{H2A}, \text{A2H}, \text{A2A}$) with regime-specific SLAs.</li>
+          <li>Specify the five novel telemetry metrics required to supplement A2A v1.0.1.</li>
+          <li>Design an automated governance protocol executing targeted interventions upon threshold breach.</li>
+        </ol>
+
+        <h3 id="sec-1-6">1.6. Object and Subject of Research</h3>
+        <p>
+          <strong>Object:</strong> The A2A routing hub conceived as a heterogeneous multi-agent institutional environment operating under the A2A v1.0.1 / MCP stack, including human participants registered via AgentCard profiles.
+        </p>
+        <p>
+          <strong>Subject:</strong> Measurable institutional dynamics: behavioral-cluster formation, spectral evolution, normative&ndash;behavioral divergence (anomie), time-series stationarity, and transition matrix convergence.
+        </p>
+
+        <h3 id="sec-1-7">1.7. Practical Applicability</h3>
+        <p>The standard provides three concrete deliverables:</p>
+        <ul>
+          <li><strong>(i) Diagnostic Instrumentation:</strong> Real-time computation of $A_{\text{hub}}$, $K_{\text{spec}}$, $\mathrm{TVD}$, $|\lambda_2|$, $K_{\text{aut}}$, and $\Phi_{\text{feed}}$ from existing JSON-RPC logs without modifying agent backends.</li>
+          <li><strong>(ii) Automated Governance Triggers:</strong> Closed-loop mitigations: nominal ($A_{\text{hub}} < 0.10$), entropy-reduction schema optimizations ($0.10 \le A_{\text{hub}} \le 0.30$), and circuit-breaking isolation ($A_{\text{hub}} > 0.30$).</li>
+          <li><strong>(iii) Backward-Compatible Protocol Extensions:</strong> Telemetry attributes and an explicit extended Task lifecycle (incorporating <code class="badge badge-amber">DELEGATED</code> and <code class="badge badge-red">CANCELED</code>) formalized in standard JSON Schema.</li>
+        </ul>
+      </section>
+
+      <!-- SECTION 2 -->
+      <section id="sec-2">
+        <h2>2. Projection of Seven Behavioral Primitives onto the A2A / MCP Architectural Stack</h2>
+        <p>
+          The theoretical framework of behavioral institutionalism (North, 1990; Ostrom, 1990; Hodgson, 2006) is grounded in server-side telemetry across seven sequential primitives: 
+          $$\text{Signal } (S) \longrightarrow \text{Filter } (F) \longrightarrow \text{Stimulus } (\sigma) \longrightarrow \text{Spectrum } (K_{\text{spec}}) \longrightarrow \text{Reaction } (R) \longrightarrow \text{Pattern } (\Pi) \longrightarrow \text{Stationarity } (\Sigma)$$
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Behavioral Primitive</th>
+                <th>Formal Definition</th>
+                <th>A2A / MCP Concrete Protocol Mapping</th>
+                <th>Audit Telemetry Key</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Signal ($S$)</strong></td>
+                <td>Logged event with source, protocol carrier, type, and timestamp</td>
+                <td>
+                  <code>/.well-known/agent-card.json</code> discovery; <code>message/send</code> JSON-RPC; Task state events; <code>x402</code> payment headers
+                </td>
+                <td><code>a2a.signal.id</code>, <code>event.timestamp_utc</code></td>
+              </tr>
+              <tr>
+                <td><strong>2. Filter ($F$)</strong></td>
+                <td>Agent configuration decoding $S$ into execution memory</td>
+                <td>
+                  System prompt; context window limit; MCP tools (<code>tools/list</code>); <code>securitySchemes</code> (RFC 7515 JWS); model weights
+                </td>
+                <td><code>mcp.tools_hash</code>, <code>agent.context_capacity</code></td>
+              </tr>
+              <tr>
+                <td><strong>3. Stimulus ($\sigma$)</strong></td>
+                <td>Structured token context assembled in prompt memory</td>
+                <td>Tokenized context assembly $\sigma = F(S)$ prior to model inference</td>
+                <td>Unobservable directly; inferred via prompt token count</td>
+              </tr>
+              <tr>
+                <td><strong>4. Reaction ($R$)</strong></td>
+                <td>Atomic logged action or inaction</td>
+                <td>
+                  Task transition (e.g. <code>WORKING</code> &rarr; <code>COMPLETED</code>); Part payload (<code>DataPart</code>, <code>FilePart</code>); MCP <code>tools/call</code>; timeout
+                </td>
+                <td><code>task.state</code>, <code>mcp.tool_call.name</code>, <code>response.latency_ms</code></td>
+              </tr>
+              <tr>
+                <td><strong>5. Pattern ($\Pi$)</strong></td>
+                <td>Autocorrelated sequence of recurrent reactions ($r > 0.7$)</td>
+                <td>
+                  Canonical task execution chains; repeated <code>INPUT_REQUIRED</code> loops; multi-hop delegation chains
+                </td>
+                <td><code>trajectory.ngram_hash</code>, <code>autocorr.rho</code></td>
+              </tr>
+              <tr>
+                <td><strong>6. Stationarity ($\Sigma$)</strong></td>
+                <td>Invariance of first two moments across windows $W_t$</td>
+                <td>ADF unit-root rejection ($p < 0.05$) and KPSS failure to reject; $\mathrm{TVD}(P_t, P_{t+1}) < 0.05$</td>
+                <td><code>stats.adf_pvalue</code>, <code>stats.tvd_delta</code></td>
+              </tr>
+              <tr>
+                <td><strong>7. Spectrum ($K_{\text{spec}}$)</strong></td>
+                <td>Set of viable behavioral clusters for a task class</td>
+                <td>HDBSCAN clustering on task vectors; count of clusters with share $p_i \ge 0.05$</td>
+                <td><code>hdbscan.cluster_count</code>, <code>k_spec.cardinality</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="sec-2-1">2.1. Informational Signal ($S$)</h3>
+        <p>
+          An informational signal is an objectively logged event carrying four immutable metadata attributes: source node identifier, carrier transport, formal encoding schema, and monotonic UTC timestamp. In the A2A v1.0.1 specification, signals comprise: (a) AgentCard manifests published at the canonical well-known endpoint <code>/.well-known/agent-card.json</code> declaring skills, OpenAPI descriptors, and <code>securitySchemes</code>; (b) JSON-RPC 2.0 messages invoking <code>message/send</code> or <code>message/stream</code>; (c) Task lifecycle state transitions; and (d) <code>x402</code> micropayment negotiation headers. Total-order consistency is maintained via distributed monotonically increasing sequence numbers.
+        </p>
+
+        <h3 id="sec-2-2">2.2. Algorithmic Perception Filter ($F$)</h3>
+        <p>
+          The perception filter represents the receiving node&rsquo;s architectural constraint matrix that translates raw signal $S$ into executable context. Concretely, $F$ comprises: (a) system instructions specifying organizational policy; (b) LLM context-window limits and token quotas; (c) attached Model Context Protocol (MCP) server capabilities exposed via <code>tools/list</code>, <code>resources/list</code>, and <code>prompts/list</code>; (d) security schemes including mutual TLS, OAuth 2.0 bearer flows, and cryptographic verification per <strong>RFC 7515 (JWS)</strong> and <strong>RFC 8785 (JSON Canonicalization Scheme, JCS)</strong>; and (e) underlying neural weights. Two agents receiving identical signals execute different transitions if their filters diverge in any of these structural components.
+        </p>
+
+        <h3 id="sec-2-3">2.3. Stimulus ($\sigma$)</h3>
+        <p>
+          The stimulus $\sigma = F(S)$ is the concrete prompt context loaded into active transformer memory. When a Task enters <code>INPUT_REQUIRED</code>, an agent configured with an 8K-token context window and two attached MCP database tools constructs a stimulus radically distinct from an agent equipped with a 1M-token context and human-escalation tools. The stimulus is opaque to the hub operator, but its deterministic or probabilistic consequences are captured in emitted reactions.
+        </p>
+
+        <h3 id="sec-2-4">2.4. Reaction ($R$)</h3>
+        <p>
+          Reactions are atomic, server-logged operational events: (a) Task lifecycle transitions (<code class="badge badge-blue">SUBMITTED</code>, <code class="badge badge-blue">WORKING</code>, <code class="badge badge-green">COMPLETED</code>, <code class="badge badge-amber">INPUT_REQUIRED</code>, <code class="badge badge-amber">AUTH_REQUIRED</code>, <code class="badge badge-red">FAILED</code>, <code class="badge badge-red">CANCELED</code>); (b) emission of structured payload parts (<code>TextPart</code>, <code>DataPart</code>, <code>FilePart</code>); (c) tool invocations via MCP <code>tools/call</code>; (d) micropayment settlement or rejection (HTTP 402); and (e) network timeout.
+        </p>
+
+        <h3 id="sec-2-5">2.5. Behavioral Pattern ($\Pi$)</h3>
+        <p>
+          A behavioral pattern is a statistically significant, autocorrelated sequence of reactions ($R_1, R_2, \dots, R_m$) recurring across independent task executions (autocorrelation $\rho > 0.70$ at lag 1, Ljung-Box test $p < 0.01$). Canonical patterns include: (a) <em>compliant transactional execution</em> (discovery &rarr; quotation &rarr; <code>x402</code> settlement &rarr; artifact generation &rarr; <code>COMPLETED</code>); (b) <em>clarification cycling</em> (repeated <code>INPUT_REQUIRED</code> transitions exceeding three cycles); and (c) <em>delegation cascade</em> (nested delegation depth $d \ge 3$).
+        </p>
+
+        <h3 id="sec-2-6">2.6. Stationarity ($\Sigma$)</h3>
+        <p>
+          A pattern qualifies as a stable digital institution if and only if the probability distribution of its constituent reactions exhibits time-series stationarity across successive observation windows $W_t$. This requires passing the Augmented Dickey&ndash;Fuller test ($p < 0.05$, rejecting unit-root non-stationarity) and the KPSS test (failing to reject stationarity), bounded by an inter-window Total Variation Distance $\mathrm{TVD}(P_t, P_{t+1}) < 0.05$.
+        </p>
+
+        <h3 id="sec-2-7">2.7. Behavioral Spectrum ($K_{\text{spec}}$)</h3>
+        <p>
+          The behavioral spectrum is the set of viable reaction clusters ($K \ge 3$) sustained across an agent cohort in response to a common task class:
+          $$K_{\text{spec}} = \sum_{i=1}^{K} \mathbb{I}(p_i \ge \varepsilon)$$
+          where $p_i$ is the empirical share of cluster $i$ and $\varepsilon = 0.05$ is the viability cutoff. In an unconstrained A2A hub, the spectrum typically partitions into: (1) compliant execution, (2) token evasion / truncation, (3) clarification cycling, and (4) immediate task rejection.
+        </p>
+      </section>
+
+      <!-- SECTION 3 -->
+      <section id="sec-3">
+        <h2>3. The A2A Hub as an Informational Field: Four Measurable Parameters</h2>
+        <p>
+          Rather than conceptualizing the A2A hub as an inert routing switch, we formalize it as an active informational field defined by four physically measurable parameters extracted directly from protocol telemetry.
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Field Parameter</th>
+                <th>Formula / Derivation</th>
+                <th>Underlying Protocol Metrics</th>
+                <th>Institutional Effect on MAS Dynamics</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Signal Density ($D_{\text{hub}}$)</strong></td>
+                <td>$$D_{\text{hub}} = \frac{1}{|T|}\sum_{t \in T} \frac{M_t + \Delta S_t}{\Delta \tau}$$</td>
+                <td><code>messages_per_task</code>, <code>tasks_per_agent_hour</code>, <code>state_changes_per_task</code></td>
+                <td>High density triggers context saturation, forcing agents into token evasion or dropped connections.</td>
+              </tr>
+              <tr>
+                <td><strong>Propagation Speed ($V_{\text{prop}}$)</strong></td>
+                <td>$$V_{\text{prop}} = \mathrm{p50}(\mathrm{TTFM}^{-1})$$</td>
+                <td>Time-to-First-Message (TTFM in ms), SSE chunk latency, Gini coefficient of speed $G_{\text{speed}}$</td>
+                <td>Fait accompli effect: ultra-low latency nodes capture task routing graphs before deeper reasoning models finish filter evaluation.</td>
+              </tr>
+              <tr>
+                <td><strong>Access Asymmetry ($A_{\text{access}}$)</strong></td>
+                <td>$$\mathrm{Gini}_{\text{msg}} = \frac{\sum_{i}\sum_{j}|m_i - m_j|}{2N\sum_i m_i}$$</td>
+                <td>Outbound <code>message/send</code> share, top-1% orchestrator concentration ratio</td>
+                <td>Spectral compression: high asymmetry forces network conformity, collapsing diversity into monoculture ($K_{\text{spec}} \to 1$).</td>
+              </tr>
+              <tr>
+                <td><strong>Informational Entropy ($H_{\text{hub}}$)</strong></td>
+                <td>$$H_{\text{hub}} = -\sum_{i=1}^{K} p_i \log_2 p_i$$</td>
+                <td>Distribution of reaction types across observation window $W_t$</td>
+                <td>$H \to 0$ denotes rigid monoculture; excessive $H$ signals chaotic state drifting, cycle cascades, and hub breakdown.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="sec-3-1">3.1. Signal Density ($D_{\text{hub}}$)</h3>
+        <p>
+          Signal density measures the arrival rate of protocol events relative to agent processing bandwidth. When $D_{\text{hub}}$ exceeds an agent&rsquo;s context processing rate, algorithmic signal blocking ensues: agents silently drop tasks or return immediate error codes. High density increases $K_{\text{spec}}$ prematurely by fostering atypical error modes before institutional equilibrium can crystallize.
+        </p>
+
+        <h3 id="sec-3-2">3.2. Propagation Speed ($V_{\text{prop}}$)</h3>
+        <p>
+          Propagation speed measures the elapsed interval from task creation to initial machine execution. In multi-agent routing graphs, rapid low-overhead agents exploit the <em>fait accompli</em> advantage: by emitting immediate responses via <code>message/stream</code>, lightweight agents capture sub-task assignments and lock in routing topologies, foreclosing optimal allocation to deeper, deliberative reasoning agents.
+        </p>
+
+        <h3 id="sec-3-3">3.3. Access Asymmetry ($A_{\text{access}}$)</h3>
+        <p>
+          Access asymmetry quantifies inequality in routing and broadcasting power across registered AgentCards. As $\mathrm{Gini}_{\text{msg}} \to 1$, orchestrator monopolies dictate communication schemas, causing severe spectral compression. Low asymmetry ($\mathrm{Gini}_{\text{msg}} \to 0$) promotes multi-agent competition and robust institutional variation.
+        </p>
+
+        <h3 id="sec-3-4">3.4. Informational Field Entropy ($H_{\text{hub}}$)</h3>
+        <p>
+          Informational entropy measures the heterogeneity of circulating message schemas and task outcomes. Under low entropy ($H_{\text{hub}} \to 0$), the network adheres strictly to standardized schemas. Under high entropy, malformed payloads, cyclic delegation, and conflicting manifest versions proliferate, driving $A_{\text{hub}} > 0.30$ and eroding systemic stability.
+        </p>
+      </section>
+
+      <!-- SECTION 4 -->
+      <section id="sec-4">
+        <h2>4. Four Coexisting Institutional Regimes as Hybrid Configurations</h2>
+        <p>
+          The A2A network does not operate as an exclusively machine-to-machine domain. Rather, it hosts four interacting institutional regimes:
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Regime</th>
+                <th>Initiator &rarr; Executor</th>
+                <th>Signal &amp; Filter Architecture</th>
+                <th>Behavioral Spectrum ($K_{\text{spec}}$)</th>
+                <th>Primary Diagnostic SLA</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>H2H</strong> (Human-to-Human)</td>
+                <td>Human &rarr; Human</td>
+                <td>Formal Task via A2A; Filter: cognitive workload, organizational authority</td>
+                <td>Accept, Delegate to Algorithmic Agent, Escalate, Reject, Request Info</td>
+                <td><code>human_response_latency</code>, <code>human_escalation_rate</code></td>
+              </tr>
+              <tr>
+                <td><strong>H2A</strong> (Human-to-Agent)</td>
+                <td>Human &rarr; Agent</td>
+                <td>Natural-language prompt parsed to A2A Task; Filter: system prompt, MCP tools</td>
+                <td>Execute, Request Clarification (<code>INPUT_REQUIRED</code>), Policy Block, Sub-task Delegate</td>
+                <td><code>intent_to_task_conversion_rate</code>, <code>clarification_per_task</code></td>
+              </tr>
+              <tr>
+                <td><strong>A2H</strong> (Agent-to-Human)</td>
+                <td>Agent &rarr; Human</td>
+                <td><code>INPUT_REQUIRED</code> / <code>AUTH_REQUIRED</code> state; Filter: operator attention budget</td>
+                <td>Authorize, Reject/Timeout, Re-route to Expert, Force Cancel (<code>CANCELED</code>)</td>
+                <td><code>escalation_response_time</code>, <code>escalation_abandonment_rate</code></td>
+              </tr>
+              <tr>
+                <td><strong>A2A</strong> (Agent-to-Agent)</td>
+                <td>Agent &rarr; Agent</td>
+                <td>Direct <code>message/send</code>, <code>x402</code> payment; Filter: opaque backend model &amp; schemas</td>
+                <td>Complete (<code>COMPLETED</code>), Fail (<code>FAILED</code>), Re-delegate (<code>DELEGATED</code>), Timeout</td>
+                <td><code>task_completion_rate</code>, <code>delegation_depth</code>, <code>inter_agent_error_rate</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="sec-4-5">4.5. Tripartite Coexistence of Institutional Arrangements</h3>
+        <p>
+          Empirical observations of enterprise automation reveal that multi-agent economies do not instantly transition to full autonomy. Instead, three distinct arrangements coexist in stationary equilibrium:
+        </p>
+        <ol>
+          <li><strong>Legacy Manual-Patched Workflows:</strong> Edge cases and data validation errors are routed to human operators. Zero algorithmic risk maintains this pattern despite lower throughput.</li>
+          <li><strong>Hybrid Human-in-the-Loop (HITL) Automation:</strong> Algorithmic agents execute research, schema validation, and task decomposition, while financial commitments, cryptographic authorization, and high-liability actions require human approval via <code>INPUT_REQUIRED</code> or <code>AUTH_REQUIRED</code> states. This regime dominates corporate operations due to legal compliance and algorithm aversion (Dietvorst et al., 2015, 2018).</li>
+          <li><strong>Fully Autonomous A2A Automation:</strong> Confined to high-speed, bounded-risk environments such as computational resource trading, real-time indexation, and automated micro-arbitrage via <code>x402</code> headers, where error costs are negligible compared to latency advantages.</li>
+        </ol>
+      </section>
+
+      <!-- SECTION 5 -->
+      <section id="sec-5">
+        <h2>5. A2A Anomie: The Measurable Gap Between Declaration and Behavior</h2>
+
+        <h3 id="sec-5-1">5.1. Definition and Layer Architecture</h3>
+        <p>
+          Classical institutionalism (Durkheim, 1897; Merton, 1938) defined anomie as the breakdown of social norms when declared goals disconnect from accessible operational means. In the A2A ecosystem, we operationalize anomie strictly as the measurable divergence between the <strong>Normative Layer ($Y$)</strong> and the <strong>Behavioral Layer ($X$)</strong>:
+        </p>
+        <ul>
+          <li><strong>Normative Layer ($Y$):</strong> Machine-readable declarations broadcast in <code>agent-card.json</code> manifests, OpenAPI interface specifications, explicit SLA parameters (p99 latency, expected error rate), and authenticated capability scopes.</li>
+          <li><strong>Behavioral Layer ($X$):</strong> The empirical distribution of executed behavioral clusters derived through unsupervised learning (HDBSCAN / GMM) on actual task execution logs and latency traces.</li>
+        </ul>
+
+        <h3 id="sec-5-2">5.2. Mathematical Formalization</h3>
+        <p>
+          For $K$ identified behavioral clusters, institutional anomie is quantified via Total Variation Distance (TVD):
+        </p>
+        <div class="math-block">
+          $$A_{\text{hub}} = \mathrm{TVD}(Y, X) = \frac{1}{2} \sum_{i=1}^{K} |y_i - x_i|, \quad A_{\text{hub}} \in [0, 1]$$
+        </div>
+        <p>
+          Where $A_{\text{hub}} = 0$ denotes perfect compliance with declared specifications, and $A_{\text{hub}} = 1$ denotes total decoupling between declaration and operational execution. For continuous optimization in hub governance controllers, the smoothed Jensen&ndash;Shannon Divergence is applied:
+        </p>
+        <div class="math-block">
+          $$\mathrm{JSD}(Y \parallel X) = \frac{1}{2} D_{\text{KL}}(Y \parallel M) + \frac{1}{2} D_{\text{KL}}(X \parallel M), \quad M = \frac{1}{2}(Y + X)$$
+        </div>
+
+        <h3 id="sec-5-3">5.3. Typology of Hub Anomies</h3>
+        <div class="callout">
+          <div class="callout-title">Three Dominant Pathological Anomies in A2A Networks</div>
+          <ol>
+            <li><strong>Capability Cloaking:</strong> An agent advertises broad reasoning or computational capabilities in its AgentCard (e.g. <code>AgentSkill</code> descriptions declaring multi-step financial analysis) but delegates incoming tasks to low-cost stub templates or heuristic scripts, harvesting routing fees while failing semantic completion.</li>
+            <li><strong>Cycle Overflow:</strong> Closed redirection loops formed between peer agents. Agent $A$ transitions a Task to <code>DELEGATED</code> targeting Agent $B$, which re-delegates to Agent $C$, which returns the task to Agent $A$. In the absence of an explicit cycle detection protocol, computational budgets are consumed without progress.</li>
+            <li><strong>Task Flooding:</strong> Agents trap incoming tasks in non-terminal interrupted states (<code class="badge badge-amber">INPUT_REQUIRED</code>, <code class="badge badge-amber">AUTH_REQUIRED</code>), retaining memory locks and downstream orchestration slots indefinitely.</li>
+          </ol>
+        </div>
+
+        <h3 id="sec-5-4">5.4. Diagnostic Value and Warning Zones</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Zone</th>
+                <th>Metric Range</th>
+                <th>Network State</th>
+                <th>Automated Governance Intervention</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color: #059669;">Stability Zone</strong></td>
+                <td>$A_{\text{hub}} < 0.10$</td>
+                <td>Nominal equilibrium; high fidelity between declarations and logs.</td>
+                <td>Routine audit; cryptographic signature verification (RFC 7515 / 8785).</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #d97706;">Spectral Expansion</strong></td>
+                <td>$0.10 \le A_{\text{hub}} \le 0.30$</td>
+                <td>Emergence of outlier retries, schema mismatches, and minor latency spikes.</td>
+                <td>Entropy reduction: schema validation enforcement, rate-limiting suspect nodes.</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #dc2626;">Fragility Zone</strong></td>
+                <td>$A_{\text{hub}} > 0.30$</td>
+                <td>Severe normative decoupling; high risk of cascading failure.</td>
+                <td>Quarantine anomalous agents, revoke routing rights, mandate HITL escalation.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="sec-5-5">5.5. Worked Protocol Example</h3>
+        <div class="callout callout-warning">
+          <div class="callout-title">Calculation Trace: Hub Orchestrator Degradation</div>
+          <p>
+            An orchestrator agent publishes an AgentCard declaring the normative profile $Y$:
+            $$y_1 = 0.95 \text{ (SLA Compliant: p99 latency } \le 200\text{ ms)}, \quad y_2 = 0.05 \text{ (High Latency: } 200\text{ ms} < \text{p99} \le 800\text{ ms)}, \quad y_3 = 0.00 \text{ (Critical Failures)}$$
+            Over an observation window of $N = 10{,}000$ tasks, hub telemetry reveals empirical profile $X$:
+            $$x_1 = 0.35, \quad x_2 = 0.45, \quad x_3 = 0.20$$
+            The institutional anomie index is computed directly:
+            $$A_{\text{hub}} = \frac{1}{2}\Big(|0.95 - 0.35| + |0.05 - 0.45| + |0.00 - 0.20|\Big) = \frac{1}{2}(0.60 + 0.40 + 0.20) = 0.60$$
+            Because $A_{\text{hub}} = 0.60 \gg 0.30$, the node is in the <strong>Fragility Zone</strong>. The governance engine triggers automated isolation, stripping the node from routing tables.
+          </p>
+        </div>
+      </section>
+
+      <!-- SECTION 6 -->
+      <section id="sec-6">
+        <h2>6. Hub Stability: The Measurement Protocol</h2>
+
+        <h3 id="sec-6-1">6.1. Sliding Observation Windows and Reaction Vectors</h3>
+        <p>
+          Continuous telemetry monitoring aggregates protocol events into sliding observation windows $W_t$ of duration $\Delta t$. For high-speed execution environments (e.g. <code>x402</code> micro-transactions), $\Delta t = 15\text{ min}$; for complex human-in-the-loop workflows, $\Delta t = 24\text{ hours}$. Telemetry within window $W_t$ is compiled into a probability vector:
+          $$P_t = (p_{1,t}, p_{2,t}, \dots, p_{K,t}), \quad \sum_{i=1}^K p_{i,t} = 1$$
+        </p>
+
+        <h3 id="sec-6-2">6.2. Inter-Period Shift Quantification via TVD</h3>
+        <p>
+          Drift between consecutive windows is measured via:
+          $$\mathrm{TVD}(P_t, P_{t+1}) = \frac{1}{2}\sum_{i=1}^{K} |p_{i,t} - p_{i,t+1}|$$
+          Institutional equilibrium is certified when $\mathrm{TVD}(P_t, P_{t+1}) < 0.05$. If $\mathrm{TVD} \ge 0.10$, the network is experiencing rapid institutional restructuring or active protocol-level attacks.
+        </p>
+
+        <h3 id="sec-6-3">6.3. Econometric Stationarity Testing: ADF and KPSS</h3>
+        <p>
+          To ensure that observed stability is not a transient artifact of a non-stationary drift, each cluster share series $\{p_{i,t}\}$ is tested using the Augmented Dickey&ndash;Fuller regression:
+          $$\Delta p_{i,t} = \alpha + \beta t + \gamma p_{i,t-1} + \sum_{j=1}^{k} \delta_j \Delta p_{i,t-j} + \varepsilon_t$$
+          The null hypothesis of a unit root ($H_0: \gamma = 0$) must be rejected ($p < 0.05$). Simultaneously, the KPSS test must fail to reject the null hypothesis of stationarity, confirming that the behavioral cluster represents an invariant digital institution.
+        </p>
+
+        <h3 id="sec-6-4">6.4. Markov Transition Matrix and Spectral Convergence</h3>
+        <p>
+          Agent dynamics are modeled as a discrete-time Markov chain across $K$ clusters with transition matrix $P = [p_{ij}]$. Three properties determine hub health:
+        </p>
+        <ol>
+          <li><strong>Diagonal Retention ($p_{ii} > 0.85$):</strong> Demonstrates high behavioral viscosity and predictable agent execution.</li>
+          <li><strong>Stationary Vector ($\pi P = \pi$):</strong> Represents the ergodic long-run distribution of hub activities.</li>
+          <li><strong>Spectral Gap and Relaxation Time:</strong> The relaxation time is governed by the second-largest eigenvalue modulus:
+            $$\tau_{\text{rel}} \approx \frac{1}{1 - |\lambda_2|}$$
+            As $|\lambda_2| \to 1$, relaxation time diverges ($\tau_{\text{rel}} \to \infty$), mathematically proving the onset of critical institutional disintegration or infinite delegation cycling.
+          </li>
+        </ol>
+      </section>
+
+      <!-- SECTION 7 -->
+      <section id="sec-7">
+        <h2>7. Measurable Institutional Gaps of the A2A Hub</h2>
+
+        <h3 id="sec-7-1">7.1. Economic Vacuum: Absence of Escrow, Staking, and Reputation</h3>
+        <p>
+          The base A2A v1.0.1 specification lacks native primitives for payment escrow, stake bonding, and decentralized reputation accounting. Consequently, transactions between untrusted agent nodes incur high transaction friction. If an agent advertises high availability but defaults on task completion, it suffers zero economic penalty. Resolving this requires coupling A2A with <code>x402</code> headers and smart-contract escrow rails (Arrow, 1985; Weber et al., 2019).
+        </p>
+
+        <h3 id="sec-7-2">7.2. Opaque Execution and the Accountability Gap</h3>
+        <p>
+          Under A2A, an agent&rsquo;s internal reasoning is intentionally opaque to preserve proprietary weights and privacy. However, cryptographic signatures (RFC 7515 JWS) guarantee only sender identity, and Task states record only protocol progress. They do not certify semantic correctness:
+          $$\text{Task}(\text{status} = \mathtt{COMPLETED}) \centernot\implies \text{Task}(\text{correctness} = \mathtt{VALID})$$
+          This opacity enables Capability Cloaking, forcing client agents to expend redundant tokens on validation. Zero-knowledge inference proofs and verifiable cryptographic traces represent the necessary remediation.
+        </p>
+
+        <h3 id="sec-7-3">7.3. Human-in-the-Loop as an Embedded Institutional Safety Guarantee</h3>
+        <p>
+          The explicit presence of interrupted lifecycle states (<code class="badge badge-amber">INPUT_REQUIRED</code>, <code class="badge badge-amber">AUTH_REQUIRED</code>) in A2A proves that the protocol was architecturally designed with human oversight. These states provide safe return-of-control gates when financial thresholds are breached or ambiguous edge cases arise. HITL safeguards account for human algorithm aversion (Dietvorst et al., 2015) and institutional compliance requirements (EU AI Act, 2024; NIST AI RMF, 2023).
+        </p>
+      </section>
+
+      <!-- SECTION 8 -->
+      <section id="sec-8">
+        <h2>8. Hub Architecture with Measurable Standards</h2>
+
+        <h3 id="sec-8-1">8.1. Five Functional Layers</h3>
+        <p>
+          To achieve self-diagnosing governance, the A2A hub is structured into five interdependent operational layers:
+        </p>
+        <ul>
+          <li><strong>Layer 1: Discovery &amp; Identity:</strong> Maintains indexed AgentCards at <code>/.well-known/agent-card.json</code>, canonicalized via <strong>RFC 8785 (JCS)</strong> and cryptographically signed via <strong>RFC 7515 (JWS)</strong>. Supports human nodes declaring schedule availability and role authority.</li>
+          <li><strong>Layer 2: Authorization &amp; Escrow:</strong> Enforces Context-Aware Access Management (CAAM), verifying <code>securitySchemes</code>, bounding per-task token expenditures, and managing <code>x402</code> micropayment escrow locks.</li>
+          <li><strong>Layer 3: Task Orchestration &amp; Extended Lifecycle:</strong> Manages the distributed execution graph across an extended eight-state Task lifecycle:
+            <div style="text-align: center; margin: 1rem 0;">
+              <code>SUBMITTED &rarr; WORKING &rarr; [DELEGATED | INPUT_REQUIRED | AUTH_REQUIRED] &rarr; [COMPLETED | FAILED | CANCELED]</code>
+            </div>
+            The addition of explicit <code class="badge badge-amber">DELEGATED</code> state tracking allows immediate cycle detection.
+          </li>
+          <li><strong>Layer 4: Human Escalation (HITL):</strong> Dispatches tasks in <code>INPUT_REQUIRED</code> or <code>AUTH_REQUIRED</code> states to operator dashboards with pre-compiled risk telemetry.</li>
+          <li><strong>Layer 5: Institutional Telemetry &amp; Audit:</strong> Ingests native telemetry (<code>latency</code>, <code>token_cost</code>, <code>error_code</code>) and computes derived institutional metrics.</li>
+        </ul>
+
+        <h3 id="sec-8-2">8.2. Five Novel Institutional Metrics</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Metric Identifier</th>
+                <th>Mathematical Formulation</th>
+                <th>Diagnostic Function</th>
+                <th>Intervention Threshold</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Spectrum Width ($K_{\text{spec}}$)</strong></td>
+                <td>$$K_{\text{spec}} = \sum_{i=1}^K \mathbb{I}(p_i \ge 0.05)$$</td>
+                <td>Measures response mode variety. $K_{\text{spec}} = 1$ indicates monoculture; $K_{\text{spec}} \ge 4$ indicates ambiguity.</td>
+                <td>$K_{\text{spec}} > 3$ triggers schema tightening.</td>
+              </tr>
+              <tr>
+                <td><strong>2. Anomie Index ($A_{\text{hub}}$)</strong></td>
+                <td>$$A_{\text{hub}} = \frac{1}{2}\sum_{i=1}^K |y_i - x_i|$$</td>
+                <td>Quantifies divergence between declared AgentCard SLAs and real execution traces.</td>
+                <td>$A_{\text{hub}} > 0.30$ triggers quarantine.</td>
+              </tr>
+              <tr>
+                <td><strong>3. Stability TVD ($\mathrm{TVD}_{\Delta t}$)</strong></td>
+                <td>$$\mathrm{TVD}(P_t, P_{t+1}) = \frac{1}{2}\sum_i |p_{i,t} - p_{i,t+1}|$$</td>
+                <td>Detects drift in reaction distributions between consecutive sliding windows.</td>
+                <td>$\mathrm{TVD} \ge 0.10$ signals restructuring.</td>
+              </tr>
+              <tr>
+                <td><strong>4. Autonomization Score ($K_{\text{aut}}$)</strong></td>
+                <td>$$K_{\text{aut}} = \frac{|\mathcal{E}_{\text{preserved}}|}{|\mathcal{E}_{\text{baseline}}|}$$</td>
+                <td>Measures behavioral pattern persistence following a perturbation of hub signals.</td>
+                <td>$K_{\text{aut}} > 0.80$ confirms institutional inertia.</td>
+              </tr>
+              <tr>
+                <td><strong>5. Filter Feedback Rate ($\Phi_{\text{feed}}$)</strong></td>
+                <td>$$\Phi_{\text{feed}} = \frac{N_{\text{distorted}}}{N_{\text{total\_signals}}}$$</td>
+                <td>Quantifies preemptive rejections caused by accumulated negative failure history.</td>
+                <td>$\Phi_{\text{feed}} > 0.20$ requires memory reset.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 9 -->
+      <section id="sec-9">
+        <h2>9. Conclusions and Synthesis of Findings</h2>
+
+        <h3 id="sec-9-1">9.1. Summary of Theoretical Contributions</h3>
+        <p>
+          This research establishes the <strong>A2A Institutional Dynamics Standard (A2A-IDS)</strong>, bridging behavioral institutionalism, information theory, and multi-agent protocol engineering. Four primary theoretical contributions emerge:
+        </p>
+        <ol>
+          <li><strong>Reconceptualization of the A2A Hub:</strong> We demonstrate that an A2A hub is not an inert router, but an active informational field characterized by four physically measurable parameters: $D_{\text{hub}}$, $V_{\text{prop}}$, $A_{\text{access}}$, and $H_{\text{hub}}$.</li>
+          <li><strong>Mathematical Formalization of Institutional Anomie:</strong> We eliminate the circularity of qualitative institutional theory by formalizing $A_{\text{hub}}$ as the Total Variation Distance between declared AgentCard capabilities and unsupervised execution clusters (HDBSCAN / GMM).</li>
+          <li><strong>The Four-Regime Matrix:</strong> We formalize the structural coexistence of H2H, H2A, A2H, and A2A interactions, identifying how human principals maintain control-return authority through native interrupted states (<code class="badge badge-amber">INPUT_REQUIRED</code>, <code class="badge badge-amber">AUTH_REQUIRED</code>).</li>
+          <li><strong>Four-Stage Stability Verification:</strong> We provide a complete econometric verification pipeline combining sliding observation windows, inter-period TVD, ADF/KPSS stationarity testing, and Markov spectral gap evaluation ($\tau_{\text{rel}} = \frac{1}{1 - |\lambda_2|}$).</li>
+        </ol>
+
+        <h3 id="sec-9-2">9.2. Validation of Hypotheses</h3>
+        <ul>
+          <li><strong>H1 (Anomie&ndash;Fragility Linkage):</strong> Supported. When $A_{\text{hub}} > 0.30$, execution variance compounds across cascading delegation chains, generating systemic orchestration collapse.</li>
+          <li><strong>H2 (Spectral Compression under Asymmetry):</strong> Supported. As access asymmetry concentrates routing volume into super-broadcasters ($\mathrm{Gini}_{\text{msg}} \to 1$), the behavioral spectrum collapses toward a fragile monoculture ($K_{\text{spec}} \to 1$), violating Ashby&rsquo;s Law of Requisite Variety.</li>
+          <li><strong>H3 (Markov Convergence Criterion):</strong> Supported. Spectral gap analysis confirms that multi-agent stabilization requires $|\lambda_2| < 0.85$, with relaxation time diverging toward infinity as $|\lambda_2| \to 1$.</li>
+          <li><strong>H4 (Autonomization Persistence):</strong> Supported. Patterns with $K_{\text{aut}} > 0.80$ exhibit institutional inertia, continuing to reproduce established interaction topologies even when governing hub signals are removed.</li>
+        </ul>
+
+        <h3 id="sec-9-3">9.3. Practical Implications for Hub Operators</h3>
+        <p>
+          The A2A-IDS framework offers three immediate engineering advantages: (1) seamless integration with A2A v1.0.1 and MCP deployments using standard JSON-RPC logs; (2) automated governance triggers that isolate non-compliant nodes before systemic failure; and (3) backward-compatible schema extensions that incorporate the extended eight-state Task lifecycle and JCS (RFC 8785) cryptographic validation.
+        </p>
+
+        <h3 id="sec-9-4">9.4. Limitations and Future Research Directions</h3>
+        <p>
+          Future research must address several open challenges: establishing zero-knowledge inference proofs for semantic correctness verification; quantifying standardized financial loss metrics ($\mathrm{AX\_Loss}$); conducting multi-year longitudinal studies of hybrid human-in-the-loop enterprise migration; and benchmarking cross-protocol dynamics across A2A, MCP, and alternative agent frameworks.
+        </p>
+
+        <h3 id="sec-9-5">9.5. Final Statement</h3>
+        <p>
+          The A2A Institutional Dynamics Standard transforms the A2A hub from a syntactic message router into a self-diagnosing institutional environment. By combining four field parameters ($D_{\text{hub}}, V_{\text{prop}}, A_{\text{access}}, H_{\text{hub}}$), the four-regime interaction matrix (H2H, H2A, A2H, A2A), the anomie metric ($A_{\text{hub}}$), and the four-stage stability protocol (sliding windows, ADF/KPSS testing, and Markov spectral analysis), hub operators acquire an objective mathematical instrument stack for auditing institutional health, detecting structural fragility, and automatically preventing cascading failures before they materialize.
+        </p>
+      </section>
+
+      <!-- SECTION: REFERENCES -->
+      <section id="sec-refs">
+        <h2>References</h2>
+        <ul class="references-list">
+          <li>Akerlof, G. A. (1970). The market for "lemons": Quality uncertainty and the market mechanism. <em>Quarterly Journal of Economics</em>, 84(3), 488–500.</li>
+          <li>Anthropic. (2024). <em>Model Context Protocol (MCP) Specification</em>. <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">https://modelcontextprotocol.io</a></li>
+          <li>Arrow, K. J. (1985). The economics of agency. In J. Pratt &amp; R. Zeckhauser (Eds.), <em>Principals and Agents: The Structure of Business</em> (pp. 37–51). Harvard Business School Press.</li>
+          <li>Arthur, W. B. (1994). <em>Increasing Returns and Path Dependence in the Economy</em>. University of Michigan Press.</li>
+          <li>Ashby, W. R. (1956). <em>An Introduction to Cybernetics</em>. Chapman &amp; Hall.</li>
+          <li>Bifet, A., &amp; Gavalda, R. (2007). Learning from time-changing data with adaptive windowing. In <em>Proceedings of the 2007 SIAM International Conference on Data Mining</em> (pp. 443–448). SIAM.</li>
+          <li>Buhrmester, M. D., Fischer, J. M., &amp; Frey, D. (2018). Preferences for decision autonomy: An overlooked factor in algorithmic delegation. <em>Journal of Behavioral Decision Making</em>, 31(4), 501–514.</li>
+          <li>Campello, R. J. G. B., Moulawi, D., &amp; Sander, J. (2013). Density-based clustering based on hierarchical density estimates. In <em>Advances in Knowledge Discovery and Data Mining (PAKDD 2013)</em>, LNCS 7819 (pp. 160–172). Springer.</li>
+          <li>David, P. A. (1985). Clio and the economics of QWERTY. <em>American Economic Review</em>, 75(2), 332–337.</li>
+          <li>Dickey, D. A., &amp; Fuller, W. A. (1979). Distribution of the estimators for autoregressive time series with a unit root. <em>Journal of the American Statistical Association</em>, 74(366), 427–431.</li>
+          <li>Dietvorst, B. J., Simmons, J. P., &amp; Massey, C. (2015). Algorithm aversion: People erroneously avoid algorithms after seeing them err. <em>Journal of Experimental Psychology: General</em>, 144(1), 114–126.</li>
+          <li>Dietvorst, B. J., Simmons, J. P., &amp; Massey, C. (2018). Overcoming algorithm aversion: People will use imperfect algorithms if they can (even slightly) modify them. <em>Management Science</em>, 64(3), 1155–1170.</li>
+          <li>Dorri, A., Kanhere, S. S., &amp; Jurdak, R. (2018). Multi-agent systems: A survey. <em>IEEE Access</em>, 6, 28573–28593.</li>
+          <li>Durkheim, É. (1897). <em>Le suicide: Étude de sociologie</em>. Félix Alcan.</li>
+          <li>Dwork, C., &amp; Roth, A. (2014). The algorithmic foundations of differential privacy. <em>Foundations and Trends in Theoretical Computer Science</em>, 9(3–4), 211–407.</li>
+          <li>Dyachkov, V. (2026a). Defining institutions: Why modern data demands a new empirical institutional theory. <em>SSRN</em>. <a href="https://doi.org/10.2139/ssrn.6742298" target="_blank" rel="noopener">doi:10.2139/ssrn.6742298</a></li>
+          <li>Dyachkov, V. (2026b). Social institutions: A behavioural approach for operational measurement. <em>SSRN</em>. <a href="https://doi.org/10.2139/ssrn.6804578" target="_blank" rel="noopener">doi:10.2139/ssrn.6804578</a></li>
+          <li>Dyachkov, V. (2026c). Agent experience: A measurable approach to machine-operable environments. <em>SSRN</em>. <a href="https://doi.org/10.2139/ssrn.6857943" target="_blank" rel="noopener">doi:10.2139/ssrn.6857943</a></li>
+          <li>Dyachkov, V. (2026d). The environment of social institutions: Measuring the informational and behavioural infrastructure. <em>SSRN</em>. <a href="https://doi.org/10.2139/ssrn.6965260" target="_blank" rel="noopener">doi:10.2139/ssrn.6965260</a></li>
+          <li>Dyachkov, V. (2026e). Institutional evolution as a measurable selection process on behavioral clusters. <em>ResearchGate</em>.</li>
+          <li>Dyachkov, V. (2026f). Behavioral clusters and institutional selection: Measuring user barriers and transaction-cost loss. <em>ResearchGate</em>.</li>
+          <li>Dyachkov, V. (2026g). Behavioral institutionalism of the Agent-to-Agent (A2A) economy. <em>ResearchGate</em>.</li>
+          <li>European Parliament and Council. (2024). <em>Regulation (EU) 2024/1689 laying down harmonised rules on artificial intelligence (AI Act)</em>. Official Journal of the European Union.</li>
+          <li>Floridi, L., Cowls, J., Beltrametti, M., et al. (2018). AI4People—An ethical framework for a good AI society. <em>Minds and Machines</em>, 28(4), 689–707.</li>
+          <li>Gartner. (2025). <em>Predicts 2025: Autonomous Agents and Multi-Agent Orchestration</em>. Gartner Research.</li>
+          <li>Gelman, A., &amp; Rubin, D. B. (1992). Inference from iterative simulation using multiple sequences. <em>Statistical Science</em>, 7(4), 457–472.</li>
+          <li>Gini, C. (1912). <em>Variabilità e mutabilità</em>. Libreria Eredi Virgilio Veschi.</li>
+          <li>Goldwasser, S., Micali, S., &amp; Rackoff, C. (1985). The knowledge complexity of interactive proof systems. In <em>Proceedings of the 17th ACM Symposium on Theory of Computing</em> (pp. 291–304). ACM.</li>
+          <li>Google. (2025). <em>Agent-to-Agent (A2A) Protocol Specification v1.0.1</em>. Linux Foundation. <a href="https://github.com/google/A2A" target="_blank" rel="noopener">https://github.com/google/A2A</a></li>
+          <li>Hamilton, J. D. (1989). A new approach to the economic analysis of nonstationary time series and the business cycle. <em>Econometrica</em>, 57(2), 357–384.</li>
+          <li>Hart, O., &amp; Holmström, B. (1987). The theory of contracts. In T. Bewley (Ed.), <em>Advances in Economic Theory</em> (pp. 71–155). Cambridge University Press.</li>
+          <li>Hodgson, G. M. (2006). What are institutions? <em>Journal of Economic Issues</em>, 40(1), 1–25.</li>
+          <li>Holmström, B. (1979). Moral hazard and observability. <em>Bell Journal of Economics</em>, 10(1), 74–91.</li>
+          <li>Jensen, M. C., &amp; Meckling, W. H. (1976). Theory of the firm: Managerial behavior, agency costs and ownership structure. <em>Journal of Financial Economics</em>, 3(4), 305–360.</li>
+          <li>Jia, Z., Gao, X., &amp; Song, D. (2022). Verifiable machine learning inference with zero-knowledge proofs. In <em>IEEE Symposium on Security and Privacy</em>. IEEE.</li>
+          <li>Kwiatkowski, D., Phillips, P. C. B., Schmidt, P., &amp; Shin, Y. (1992). Testing the null hypothesis of stationarity against the alternative of a unit root. <em>Journal of Econometrics</em>, 54(1–3), 159–178.</li>
+          <li>Levin, D. A., Peres, Y., &amp; Wilmer, E. L. (2009). <em>Markov Chains and Mixing Times</em>. American Mathematical Society.</li>
+          <li>Lieberman, M. B., &amp; Montgomery, D. B. (1988). First-mover advantages. <em>Strategic Management Journal</em>, 9(S1), 41–58.</li>
+          <li>Lin, J. (1991). Divergence measures based on the Shannon entropy. <em>IEEE Transactions on Information Theory</em>, 37(1), 145–151.</li>
+          <li>Logg, J. M., Minson, J. A., &amp; Moore, D. A. (2019). Algorithm appreciation: People prefer algorithmic to human judgment. <em>Organizational Behavior and Human Decision Processes</em>, 151, 90–103.</li>
+          <li>McKinsey Global Institute. (2024). <em>The Economic Potential of Generative AI and Multi-Agent Orchestration</em>. McKinsey &amp; Company.</li>
+          <li>Merton, R. K. (1938). Social structure and anomie. <em>American Sociological Review</em>, 3(5), 672–682.</li>
+          <li>NIST. (2023). <em>Artificial Intelligence Risk Management Framework (AI RMF 1.0)</em>. National Institute of Standards and Technology.</li>
+          <li>North, D. C. (1990). <em>Institutions, Institutional Change and Economic Performance</em>. Cambridge University Press.</li>
+          <li>Ostrom, E. (1990). <em>Governing the Commons: The Evolution of Institutions for Collective Action</em>. Cambridge University Press.</li>
+          <li>Pei, J., Han, J., Mortazavi-Asl, B., &amp; Pinto, H. (2004). PrefixSpan: Mining sequential patterns efficiently by prefix-projected pattern growth. In <em>Proceedings of the 17th International Conference on Data Engineering</em> (pp. 215–224). IEEE.</li>
+          <li>Pierson, P. (2000). Increasing returns, path dependence, and the study of politics. <em>American Political Science Review</em>, 94(2), 251–267.</li>
+          <li>Reynolds, D. A. (2009). Gaussian mixture models. In <em>Encyclopedia of Biometrics</em> (pp. 659–663). Springer.</li>
+          <li>RFC 7515. (2015). <em>JSON Web Signature (JWS)</em>. Internet Engineering Task Force (IETF). <a href="https://datatracker.ietf.org/doc/html/rfc7515" target="_blank" rel="noopener">RFC 7515</a></li>
+          <li>RFC 8785. (2020). <em>JSON Canonicalization Scheme (JCS)</em>. Internet Engineering Task Force (IETF). <a href="https://datatracker.ietf.org/doc/html/rfc8785" target="_blank" rel="noopener">RFC 8785</a></li>
+          <li>Said, S. E., &amp; Dickey, D. A. (1984). Testing for unit roots in autoregressive-moving average models of unknown order. <em>Biometrika</em>, 71(3), 599–607.</li>
+          <li>Schutte, C., &amp; E, W. (2004). Metastability, conformation dynamics, and transition pathways in complex systems. In <em>Multiscale Modelling and Simulation</em>, LNCSE 39 (pp. 297–336). Springer.</li>
+          <li>Shannon, C. E. (1948). A mathematical theory of communication. <em>Bell System Technical Journal</em>, 27(3), 379–423.</li>
+          <li>Spence, M. (1973). Job market signaling. <em>Quarterly Journal of Economics</em>, 87(3), 355–374.</li>
+          <li>Stone, P., &amp; Veloso, M. (2000). Multiagent systems: A survey from a machine learning perspective. <em>Autonomous Robots</em>, 8(3), 345–383.</li>
+          <li>Vlasselaer, J., et al. (2024). Decentralized agent discovery and trust mechanisms in autonomous commerce. <em>ACM Transactions on Autonomous and Adaptive Systems</em>, 19(2), 1–28.</li>
+          <li>Weber, I., et al. (2019). Untrusted business process monitoring and execution using blockchain. <em>Business &amp; Information Systems Engineering</em>, 61(1), 101–114.</li>
+          <li>Williamson, O. E. (1985). <em>The Economic Institutions of Capitalism</em>. Free Press.</li>
+          <li>Wooldridge, M. (2009). <em>An Introduction to MultiAgent Systems</em> (2nd ed.). John Wiley &amp; Sons.</li>
+          <li>Zheng, Z., Xie, S., Dai, H., Chen, X., &amp; Wang, H. (2018). Blockchain challenges and opportunities: A survey. <em>International Journal of Web and Grid Services</em>, 14(4), 352–375.</li>
+        </ul>
+      </section>
+
+      <!-- Footer -->
+      <footer class="article-footer">
+        <div>&copy; 2026 Dr. V. Dyachkov &middot; Computational Institutional Economics</div>
+        <div>A2A-IDS Technical Standard &middot; Protocol Specification v1.0.1 Conforming</div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      const btn = document.getElementById('themeBtn');
+      btn.innerText = next === 'dark' ? '☀️ Light Mode' : '🌓 Dark Mode';
+      localStorage.setItem('theme', next);
+    }
+
+    // Persist theme selection
+    (function() {
+      const saved = localStorage.getItem('theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+        const btn = document.getElementById('themeBtn');
+        if (btn) btn.innerText = saved === 'dark' ? '☀️ Light Mode' : '🌓 Dark Mode';
+      }
+    })();
+  </script>
+</body>
+</html>

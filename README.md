@@ -26,6 +26,15 @@ This perspective enables measurement and prediction impossible under classical i
 
 ---
 
+## Featured Publication
+
+### [Behavioral Institutionalism of the Agent-to-Agent (A2A) Economy: The A2A Institutional Dynamics Standard (A2A-IDS)](docs/index.html)
+* **Live Article & Web Page:** [https://aihlp.github.io/institutional_design/](https://aihlp.github.io/institutional_design/)
+* **Theory & Specification:** [`theory/behavioral-dynamics/a2a-institutional-dynamics.md`](theory/behavioral-dynamics/a2a-institutional-dynamics.md)
+* **Protocol Alignment:** Google Agent-to-Agent (A2A) v1.0.1, Anthropic Model Context Protocol (MCP), IETF RFC 8785 (JCS), RFC 7515 (JWS), and HTTP 402 / x402 micropayments.
+
+---
+
 ## Repository Architecture
 
 ```
